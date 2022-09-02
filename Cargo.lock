@@ -3854,6 +3854,7 @@ version = "0.12.0"
 dependencies = [
  "borsh",
  "derivative",
+ "hex",
  "namada_core",
  "proptest",
  "rust_decimal",
