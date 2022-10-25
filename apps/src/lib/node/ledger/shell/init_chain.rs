@@ -5,7 +5,6 @@ use std::hash::Hash;
 use namada::ledger::parameters::Parameters;
 use namada::ledger::pos::into_tm_voting_power;
 use namada::types::key::*;
-#[cfg(not(feature = "dev"))]
 use sha2::{Digest, Sha256};
 
 use super::*;
@@ -34,21 +33,15 @@ where
                 current_chain_id, init.chain_id
             )));
         }
-        #[cfg(not(feature = "dev"))]
         let genesis = genesis::genesis(&self.base_dir, &self.storage.chain_id);
-        #[cfg(not(feature = "dev"))]
-        {
-            let genesis_bytes = genesis.try_to_vec().unwrap();
-            let errors = self.storage.chain_id.validate(genesis_bytes);
-            use itertools::Itertools;
-            assert!(
-                errors.is_empty(),
-                "Chain ID validation failed: {}",
-                errors.into_iter().format(". ")
-            );
-        }
-        #[cfg(feature = "dev")]
-        let genesis = genesis::genesis();
+        let genesis_bytes = genesis.try_to_vec().unwrap();
+        let errors = self.storage.chain_id.validate(genesis_bytes);
+        use itertools::Itertools;
+        assert!(
+            errors.is_empty(),
+            "Chain ID validation failed: {}",
+            errors.into_iter().format(". ")
+        );
 
         let ts: protobuf::Timestamp = init.time.expect("Missing genesis time");
         let initial_height = init
@@ -82,20 +75,15 @@ where
             wasm_loader::read_wasm(&self.wasm_dir, &implicit_vp_code_path)
                 .map_err(Error::ReadingWasm)?;
         // In dev, we don't check the hash
-        #[cfg(feature = "dev")]
-        let _ = implicit_vp_sha256;
-        #[cfg(not(feature = "dev"))]
-        {
-            let mut hasher = Sha256::new();
-            hasher.update(&implicit_vp);
-            let vp_code_hash = hasher.finalize();
-            assert_eq!(
-                vp_code_hash.as_slice(),
-                &implicit_vp_sha256,
-                "Invalid implicit account's VP sha256 hash for {}",
-                implicit_vp_code_path
-            );
-        }
+        let mut hasher = Sha256::new();
+        hasher.update(&implicit_vp);
+        let vp_code_hash = hasher.finalize();
+        assert_eq!(
+            vp_code_hash.as_slice(),
+            &implicit_vp_sha256,
+            "Invalid implicit account's VP sha256 hash for {}",
+            implicit_vp_code_path
+        );
         let parameters = Parameters {
             epoch_duration,
             max_expected_time_per_block,
@@ -141,21 +129,15 @@ where
                 }
             };
 
-            // In dev, we don't check the hash
-            #[cfg(feature = "dev")]
-            let _ = vp_sha256;
-            #[cfg(not(feature = "dev"))]
-            {
-                let mut hasher = Sha256::new();
-                hasher.update(&vp_code);
-                let vp_code_hash = hasher.finalize();
-                assert_eq!(
-                    vp_code_hash.as_slice(),
-                    &vp_sha256,
-                    "Invalid established account's VP sha256 hash for {}",
-                    vp_code_path
-                );
-            }
+            let mut hasher = Sha256::new();
+            hasher.update(&vp_code);
+            let vp_code_hash = hasher.finalize();
+            assert_eq!(
+                vp_code_hash.as_slice(),
+                &vp_sha256,
+                "Invalid established account's VP sha256 hash for {}",
+                vp_code_path
+            );
 
             self.storage
                 .write(&Key::validity_predicate(&address), vp_code)
@@ -197,21 +179,15 @@ where
                         .unwrap()
                 });
 
-            // In dev, we don't check the hash
-            #[cfg(feature = "dev")]
-            let _ = vp_sha256;
-            #[cfg(not(feature = "dev"))]
-            {
-                let mut hasher = Sha256::new();
-                hasher.update(&vp_code);
-                let vp_code_hash = hasher.finalize();
-                assert_eq!(
-                    vp_code_hash.as_slice(),
-                    &vp_sha256,
-                    "Invalid token account's VP sha256 hash for {}",
-                    vp_code_path
-                );
-            }
+            let mut hasher = Sha256::new();
+            hasher.update(&vp_code);
+            let vp_code_hash = hasher.finalize();
+            assert_eq!(
+                vp_code_hash.as_slice(),
+                &vp_sha256,
+                "Invalid token account's VP sha256 hash for {}",
+                vp_code_path
+            );
 
             self.storage
                 .write(&Key::validity_predicate(&address), vp_code)
@@ -239,19 +215,15 @@ where
                     .unwrap()
                 },
             );
-
-            #[cfg(not(feature = "dev"))]
-            {
-                let mut hasher = Sha256::new();
-                hasher.update(&vp_code);
-                let vp_code_hash = hasher.finalize();
-                assert_eq!(
-                    vp_code_hash.as_slice(),
-                    &validator.validator_vp_sha256,
-                    "Invalid validator VP sha256 hash for {}",
-                    validator.validator_vp_code_path
-                );
-            }
+            let mut hasher = Sha256::new();
+            hasher.update(&vp_code);
+            let vp_code_hash = hasher.finalize();
+            assert_eq!(
+                vp_code_hash.as_slice(),
+                &validator.validator_vp_sha256,
+                "Invalid validator VP sha256 hash for {}",
+                validator.validator_vp_code_path
+            );
 
             let addr = &validator.pos_data.address;
             self.storage

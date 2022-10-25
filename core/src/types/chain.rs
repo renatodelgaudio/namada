@@ -16,13 +16,8 @@ pub const CHAIN_ID_PREFIX_MAX_LEN: usize = 19;
 /// Separator between chain ID prefix and the generated hash
 pub const CHAIN_ID_PREFIX_SEP: char = '.';
 
-/// Development default chain ID. Must be [`CHAIN_ID_LENGTH`] long.
-#[cfg(feature = "dev")]
-pub const DEFAULT_CHAIN_ID: &str = "namada-devchain.00000000000000";
-
 /// Release default chain ID. Must be [`CHAIN_ID_LENGTH`] long.
-#[cfg(not(feature = "dev"))]
-pub const DEFAULT_CHAIN_ID: &str = "namada-internal.00000000000000";
+pub const DEFAULT_CHAIN_ID: &str = "anoma-internal.000000000000000";
 
 /// Chain ID
 #[derive(
