@@ -57,6 +57,9 @@ pub struct Network {
     pub chain_id: ChainId,
 }
 
+/// Offset the ports used in the network configuration to avoid shared resources
+pub const ANOTHER_CHAIN_PORT_OFFSET: u16 = 1001;
+
 /// Add `num` validators to the genesis config. Note that called from inside
 /// the [`network`]'s first argument's closure, there is 1 validator already
 /// present to begin with, so e.g. `add_validators(1, _)` will configure a
@@ -89,8 +92,28 @@ pub fn single_node_net() -> Result<Test> {
     network(|genesis| genesis, None)
 }
 
+/// Setup two networks with a single genesis validator node.
+pub fn two_single_node_nets() -> Result<(Test, Test)> {
+    Ok((
+        network(|genesis| genesis, None)?,
+        network(set_another_address, None)?,
+    ))
+}
+
+fn set_another_address(mut genesis: GenesisConfig) -> GenesisConfig {
+    let validator_0 = genesis.validator.get_mut("validator-0").unwrap();
+    let mut net_address_0 =
+        SocketAddr::from_str(validator_0.net_address.as_ref().unwrap())
+            .unwrap();
+    let current_port = net_address_0.port();
+    net_address_0.set_port(current_port + ANOTHER_CHAIN_PORT_OFFSET);
+    validator_0.net_address = Some(net_address_0.to_string());
+    genesis
+}
+
+/// Setup a configurable network.
 pub fn network(
-    update_genesis: impl Fn(GenesisConfig) -> GenesisConfig,
+    mut update_genesis: impl FnMut(GenesisConfig) -> GenesisConfig,
     consensus_timeout_commit: Option<&'static str>,
 ) -> Result<Test> {
     INIT.call_once(|| {
@@ -783,6 +806,7 @@ pub mod constants {
     pub const TX_INIT_PROPOSAL: &str = "wasm_for_tests/tx_init_proposal.wasm";
     pub const TX_WRITE_STORAGE_KEY_WASM: &str =
         "wasm_for_tests/tx_write_storage_key.wasm";
+    pub const TX_IBC_WASM: &str = "wasm/tx_ibc.wasm";
     pub const VP_ALWAYS_TRUE_WASM: &str = "wasm_for_tests/vp_always_true.wasm";
     pub const VP_ALWAYS_FALSE_WASM: &str =
         "wasm_for_tests/vp_always_false.wasm";
