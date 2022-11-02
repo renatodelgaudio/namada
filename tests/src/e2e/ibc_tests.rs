@@ -693,7 +693,7 @@ fn transfer_token(
         test_a,
         ALBERT,
         &receiver,
-        XAN,
+        NAM,
         &Amount::from(100000_f64),
         port_channel_id_a,
         None,
@@ -743,7 +743,7 @@ fn transfer_received_token(
     port_channel_id: &PortChannelId,
     test: &Test,
 ) -> Result<()> {
-    let xan = find_address(test, XAN)?;
+    let xan = find_address(test, NAM)?;
     // token received via the port and channel
     let denom = format!(
         "{}/{}/{}",
@@ -763,7 +763,7 @@ fn transfer_received_token(
         "--target",
         ALBERT,
         "--token",
-        XAN,
+        NAM,
         "--sub-prefix",
         &sub_prefix,
         "--amount",
@@ -773,7 +773,7 @@ fn transfer_received_token(
         "--gas-limit",
         "0",
         "--fee-token",
-        XAN,
+        NAM,
         "--ledger-address",
         &rpc,
     ];
@@ -792,7 +792,7 @@ fn transfer_back(
     client_id_b: &ClientId,
     port_channel_id_b: &PortChannelId,
 ) -> Result<()> {
-    let xan = find_address(test_b, XAN)?.to_string();
+    let xan = find_address(test_b, NAM)?.to_string();
     let receiver = find_address(test_a, ALBERT)?;
 
     // Chain A was the source for the sent token
@@ -812,7 +812,7 @@ fn transfer_back(
         test_b,
         BERTHA,
         &receiver,
-        XAN,
+        NAM,
         &Amount::from(50000_f64),
         port_channel_id_b,
         Some(sub_prefix),
@@ -871,7 +871,7 @@ fn transfer_timeout(
         test_a,
         ALBERT,
         &receiver,
-        XAN,
+        NAM,
         &Amount::from(100000_f64),
         port_channel_id_a,
         None,
@@ -916,7 +916,7 @@ fn transfer_timeout_on_close(
         test_b,
         BERTHA,
         &receiver,
-        XAN,
+        NAM,
         &Amount::from(100000_f64),
         port_channel_id_b,
         None,
@@ -965,7 +965,7 @@ fn try_transfer_on_close(
         test_a,
         ALBERT,
         &receiver,
-        XAN,
+        NAM,
         &Amount::from(100000_f64),
         port_channel_id_a,
         None,
@@ -1064,7 +1064,7 @@ fn submit_ibc_tx(
             "--gas-limit",
             "0",
             "--fee-token",
-            XAN,
+            NAM,
             "--ledger-address",
             &rpc
         ],
@@ -1269,12 +1269,12 @@ fn check_balances(
     test_a: &Test,
     test_b: &Test,
 ) -> Result<()> {
-    let token = find_address(test_a, XAN)?;
+    let token = find_address(test_a, NAM)?;
 
     // Check the balances on Chain A
     let rpc_a = get_actor_rpc(test_a, &Who::Validator(0));
     let query_args =
-        vec!["balance", "--token", XAN, "--ledger-address", &rpc_a];
+        vec!["balance", "--token", NAM, "--ledger-address", &rpc_a];
     let mut client = run!(test_a, Bin::Client, query_args, Some(40))?;
     // Check the source balance
     let expected = ": 900000, owned by albert".to_string();
@@ -1307,13 +1307,13 @@ fn check_balances(
         "--owner",
         BERTHA,
         "--token",
-        XAN,
+        NAM,
         "--sub-prefix",
         &sub_prefix,
         "--ledger-address",
         &rpc_b,
     ];
-    let expected = format!("XAN with {}: 100000", sub_prefix);
+    let expected = format!("NAM with {}: 100000", sub_prefix);
     let mut client = run!(test_b, Bin::Client, query_args, Some(40))?;
     client.exp_string(&expected)?;
     client.assert_success();
@@ -1326,7 +1326,7 @@ fn check_balances_after_non_ibc(
     test: &Test,
 ) -> Result<()> {
     // Check the balance on Chain B
-    let token = find_address(test, XAN)?;
+    let token = find_address(test, NAM)?;
     let denom = format!(
         "{}/{}/{}",
         port_channel_id.port_id, port_channel_id.channel_id, token
@@ -1341,13 +1341,13 @@ fn check_balances_after_non_ibc(
         "--owner",
         BERTHA,
         "--token",
-        XAN,
+        NAM,
         "--sub-prefix",
         &sub_prefix,
         "--ledger-address",
         &rpc,
     ];
-    let expected = format!("XAN with {}: 50000", sub_prefix);
+    let expected = format!("NAM with {}: 50000", sub_prefix);
     let mut client = run!(test, Bin::Client, query_args, Some(40))?;
     client.exp_string(&expected)?;
     client.assert_success();
@@ -1358,13 +1358,13 @@ fn check_balances_after_non_ibc(
         "--owner",
         ALBERT,
         "--token",
-        XAN,
+        NAM,
         "--sub-prefix",
         &sub_prefix,
         "--ledger-address",
         &rpc,
     ];
-    let expected = format!("XAN with {}: 50000", sub_prefix);
+    let expected = format!("NAM with {}: 50000", sub_prefix);
     let mut client = run!(test, Bin::Client, query_args, Some(40))?;
     client.exp_string(&expected)?;
     client.assert_success();
@@ -1379,12 +1379,12 @@ fn check_balances_after_back(
     test_a: &Test,
     test_b: &Test,
 ) -> Result<()> {
-    let token = find_address(test_b, XAN)?;
+    let token = find_address(test_b, NAM)?;
 
     // Check the balances on Chain A
     let rpc_a = get_actor_rpc(test_a, &Who::Validator(0));
     let query_args =
-        vec!["balance", "--token", XAN, "--ledger-address", &rpc_a];
+        vec!["balance", "--token", NAM, "--ledger-address", &rpc_a];
     let mut client = run!(test_a, Bin::Client, query_args, Some(40))?;
     // Check the source balance
     let expected = ": 950000, owned by albert".to_string();
@@ -1417,13 +1417,13 @@ fn check_balances_after_back(
         "--owner",
         BERTHA,
         "--token",
-        XAN,
+        NAM,
         "--sub-prefix",
         &sub_prefix,
         "--ledger-address",
         &rpc_b,
     ];
-    let expected = format!("XAN with {}: 0", sub_prefix);
+    let expected = format!("NAM with {}: 0", sub_prefix);
     let mut client = run!(test_b, Bin::Client, query_args, Some(40))?;
     client.exp_string(&expected)?;
     client.assert_success();
