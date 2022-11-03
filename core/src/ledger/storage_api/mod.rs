@@ -2,6 +2,7 @@
 //! and VPs (both native and WASM).
 
 pub mod collections;
+mod epoched;
 mod error;
 pub mod key;
 pub mod validation;
