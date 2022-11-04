@@ -76,55 +76,6 @@ pub type GenesisValidator = namada_proof_of_stake::types::GenesisValidator<
     key::common::PublicKey,
 >;
 
-// TODO pos will depend on core, so it will be able to `Epoch` type directly
-// impl From<Epoch> for namada_proof_of_stake::types::Epoch {
-//     fn from(epoch: Epoch) -> Self {
-//         let epoch: u64 = epoch.into();
-//         namada_proof_of_stake::types::Epoch::from(epoch)
-//     }
-// }
-
-// impl From<namada_proof_of_stake::types::Epoch> for Epoch {
-//     fn from(epoch: namada_proof_of_stake::types::Epoch) -> Self {
-//         let epoch: u64 = epoch.into();
-//         Epoch(epoch)
-//     }
-// }
-
-// The error conversions are needed to implement `PosActions` in
-// `tx_prelude/src/proof_of_stake.rs`
-// impl From<namada_proof_of_stake::BecomeValidatorError<Address>>
-//     for storage_api::Error
-// {
-//     fn from(err: namada_proof_of_stake::BecomeValidatorError<Address>) ->
-// Self {         Self::new(err)
-//     }
-// }
-
-// impl From<namada_proof_of_stake::BondError<Address>> for storage_api::Error {
-//     fn from(err: namada_proof_of_stake::BondError<Address>) -> Self {
-//         Self::new(err)
-//     }
-// }
-
-// impl From<namada_proof_of_stake::UnbondError<Address, token::Amount>>
-//     for storage_api::Error
-// {
-//     fn from(
-//         err: namada_proof_of_stake::UnbondError<Address, token::Amount>,
-//     ) -> Self {
-//         Self::new(err)
-//     }
-// }
-
-// impl From<namada_proof_of_stake::WithdrawError<Address>>
-//     for storage_api::Error
-// {
-//     fn from(err: namada_proof_of_stake::WithdrawError<Address>) -> Self {
-//         Self::new(err)
-//     }
-// }
-
 #[macro_use]
 mod macros {
     /// Implement `PosReadOnly` for a type that implements

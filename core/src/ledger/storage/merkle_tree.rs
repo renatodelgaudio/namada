@@ -14,7 +14,6 @@ use prost::Message;
 use thiserror::Error;
 
 use super::traits::{StorageHasher, SubTreeRead, SubTreeWrite};
-use crate::bytes::ByteBuf;
 use crate::ledger::storage::ics23_specs::{self, ibc_leaf_spec};
 use crate::ledger::storage::types;
 use crate::types::address::{Address, InternalAddress};

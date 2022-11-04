@@ -5,12 +5,14 @@ use borsh::BorshSerialize;
 
 use crate::ledger::storage_api::{self, StorageRead, StorageWrite};
 use crate::types::address::Address;
-use crate::types::ibc::IbcEvent;
 use crate::types::storage;
 use crate::types::time::Rfc3339String;
 
 /// Transaction host functions
 pub trait TxEnv<'iter>: StorageRead<'iter> + StorageWrite {
+    /// IBC event type
+    type IbcEvent;
+
     /// Write a temporary value to be encoded with Borsh at the given key to
     /// storage.
     fn write_temp<T: BorshSerialize>(
@@ -55,7 +57,7 @@ pub trait TxEnv<'iter>: StorageRead<'iter> + StorageWrite {
     /// multiple calls, only the last emitted event will be used.
     fn emit_ibc_event(
         &mut self,
-        event: &IbcEvent,
+        event: &Self::IbcEvent,
     ) -> Result<(), storage_api::Error>;
 
     /// Get time of the current block header as rfc 3339 string

@@ -50,6 +50,7 @@ testing = [
   "rand_core",
   "proptest",
 ]
+tendermint = ["dep:tendermint", "tendermint-proto"]
 
 [dependencies]
 ark-bls12-381 = {version = "0.3"}
