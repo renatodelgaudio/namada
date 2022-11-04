@@ -175,40 +175,37 @@ impl From<DateTime<Utc>> for DateTimeUtc {
     }
 }
 
-impl TryFrom<prost_types::Timestamp> for DateTimeUtc {
-    type Error = prost_types::TimestampOutOfSystemRangeError;
+// TODO move
+// impl TryFrom<prost_types::Timestamp> for DateTimeUtc {
+//     type Error = prost_types::TimestampOutOfSystemRangeError;
 
-    fn try_from(
-        timestamp: prost_types::Timestamp,
-    ) -> Result<Self, Self::Error> {
-        let system_time: std::time::SystemTime = timestamp.try_into()?;
-        Ok(Self(system_time.into()))
-    }
-}
+//     fn try_from(
+//         timestamp: prost_types::Timestamp,
+//     ) -> Result<Self, Self::Error> {
+//         let system_time: std::time::SystemTime = timestamp.try_into()?;
+//         Ok(Self(system_time.into()))
+//     }
+// }
 
-impl From<DateTimeUtc> for prost_types::Timestamp {
-    fn from(dt: DateTimeUtc) -> Self {
-        let seconds = dt.0.timestamp();
-        let nanos = dt.0.timestamp_subsec_nanos() as i32;
-        prost_types::Timestamp { seconds, nanos }
-    }
-}
+// impl From<DateTimeUtc> for prost_types::Timestamp {
+//     fn from(dt: DateTimeUtc) -> Self {
+//         let seconds = dt.0.timestamp();
+//         let nanos = dt.0.timestamp_subsec_nanos() as i32;
+//         prost_types::Timestamp { seconds, nanos }
+//     }
+// }
 
-#[cfg(any(feature = "tendermint", feature = "tendermint-abcipp"))]
-impl TryFrom<crate::tendermint_proto::google::protobuf::Timestamp>
-    for DateTimeUtc
-{
-    type Error = prost_types::TimestampOutOfSystemRangeError;
+// TODO move
+// impl TryFrom<protobuf::Timestamp> for DateTimeUtc {
+//     type Error = prost_types::TimestampOutOfSystemRangeError;
 
-    fn try_from(
-        timestamp: crate::tendermint_proto::google::protobuf::Timestamp,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(prost_types::Timestamp {
-            seconds: timestamp.seconds,
-            nanos: timestamp.nanos,
-        })
-    }
-}
+//     fn try_from(timestamp: protobuf::Timestamp) -> Result<Self, Self::Error>
+// {         Self::try_from(prost_types::Timestamp {
+//             seconds: timestamp.seconds,
+//             nanos: timestamp.nanos,
+//         })
+//     }
+// }
 
 impl From<DateTimeUtc> for std::time::SystemTime {
     fn from(dt: DateTimeUtc) -> Self {
@@ -231,20 +228,19 @@ impl From<DateTimeUtc> for Rfc3339String {
     }
 }
 
-#[cfg(any(feature = "tendermint", feature = "tendermint-abcipp"))]
-impl TryFrom<DateTimeUtc> for crate::tendermint::time::Time {
-    type Error = crate::tendermint::Error;
+// TODO move
+// impl TryFrom<DateTimeUtc> for Time {
+//     type Error = TendermintError;
 
-    fn try_from(dt: DateTimeUtc) -> Result<Self, Self::Error> {
-        Self::parse_from_rfc3339(&DateTime::to_rfc3339(&dt.0))
-    }
-}
+//     fn try_from(dt: DateTimeUtc) -> Result<Self, Self::Error> {
+//         Self::parse_from_rfc3339(&DateTime::to_rfc3339(&dt.0))
+//     }
+// }
 
-#[cfg(any(feature = "tendermint", feature = "tendermint-abcipp"))]
-impl TryFrom<crate::tendermint::time::Time> for DateTimeUtc {
-    type Error = chrono::ParseError;
+// impl TryFrom<Time> for DateTimeUtc {
+//     type Error = chrono::ParseError;
 
-    fn try_from(t: crate::tendermint::time::Time) -> Result<Self, Self::Error> {
-        Rfc3339String(t.to_rfc3339()).try_into()
-    }
-}
+//     fn try_from(t: Time) -> Result<Self, Self::Error> {
+//         Rfc3339String(t.to_rfc3339()).try_into()
+//     }
+// }

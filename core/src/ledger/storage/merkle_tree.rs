@@ -876,3 +876,15 @@ mod test {
         assert!(basetree_verification_res);
     }
 }
+
+/// Type of membership proof from a merkle tree
+pub enum MembershipProof {
+    /// ICS23 compliant membership proof
+    ICS23(CommitmentProof),
+}
+
+impl From<CommitmentProof> for MembershipProof {
+    fn from(proof: CommitmentProof) -> Self {
+        Self::ICS23(proof)
+    }
+}
