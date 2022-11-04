@@ -17,9 +17,10 @@ use crate::btree_set::BTreeSetShims;
 use crate::epoched::DynEpochOffset;
 use crate::parameters::PosParams;
 use crate::types::{
-    decimal_mult_i128, decimal_mult_u64, BondId, Bonds, CommissionRates, Slash,
-    Slashes, TotalDeltas, Unbonds, ValidatorConsensusKeys, ValidatorDeltas,
-    ValidatorSets, ValidatorState, ValidatorStates, WeightedValidator,
+    decimal_mult_i128, decimal_mult_u64, BondId, Bonds, CommissionRates, Epoch,
+    Slash, Slashes, TotalDeltas, Unbonds, ValidatorConsensusKeys,
+    ValidatorDeltas, ValidatorSets, ValidatorState, ValidatorStates,
+    WeightedValidator,
 };
 
 #[allow(missing_docs)]

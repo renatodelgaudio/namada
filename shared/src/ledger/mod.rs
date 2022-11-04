@@ -15,3 +15,4 @@ pub mod queries;
 pub mod storage;
 pub mod storage_api;
 pub use namada_core::ledger::{tx_env, vp_env};
+pub mod vp_host_fns;

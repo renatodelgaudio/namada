@@ -10,7 +10,9 @@ use thiserror::Error;
 
 use crate::ledger::governance::vp::is_proposal_accepted;
 use super::governance;
+use crate::ledger::governance::storage as gov_storage;
 use crate::ledger::native_vp::{self, Ctx, NativeVp};
+use crate::ledger::vp_env::VpEnv;
 use crate::vm::WasmCacheAccess;
 
 #[allow(missing_docs)]
@@ -53,11 +55,19 @@ where
         let result = keys_changed.iter().all(|key| {
             let key_type: KeyType = key.into();
             match key_type {
-                KeyType::PARAMETER => governance::utils::is_proposal_accepted(
-                    self.ctx.storage,
-                    tx_data,
-                )
-                .unwrap_or(false),
+                KeyType::PARAMETER => {
+                    let proposal_id = u64::try_from_slice(tx_data).ok();
+                    match proposal_id {
+                        Some(id) => {
+                            let proposal_execution_key =
+                                gov_storage::get_proposal_execution_key(id);
+                            self.ctx
+                                .has_key_pre(&proposal_execution_key)
+                                .unwrap_or(false)
+                        }
+                        _ => false,
+                    }
+                }
                 KeyType::UNKNOWN_PARAMETER => false,
                 KeyType::UNKNOWN => true,
             }

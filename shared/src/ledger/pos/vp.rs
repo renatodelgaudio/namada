@@ -23,6 +23,7 @@ use super::{
     TotalDeltas, Unbonds, ValidatorConsensusKeys, ValidatorDeltas,
     ValidatorSets,
 };
+use crate::ledger::governance::storage as gov_storage;
 use crate::ledger::native_vp::{
     self, governance, Ctx, CtxPostStorageRead, CtxPreStorageRead, NativeVp,
 };

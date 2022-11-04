@@ -32,7 +32,7 @@ pub use traits::{Sha256Hasher, StorageHasher};
 use crate::ledger::gas::MIN_STORAGE_GAS;
 use crate::ledger::parameters::{self, EpochDuration, Parameters};
 pub use crate::ledger::storage::merkle_tree::{
-    MerkleTree, MerkleTreeStoresRead, MerkleTreeStoresWrite, StoreType,
+    MerkleTree, MerkleTreeStoresRead, MerkleTreeStoresWrite, StoreType, MembershipProof,
 };
 use crate::ledger::storage::merkle_tree::{
     Error as MerkleTreeError, MerkleRoot,

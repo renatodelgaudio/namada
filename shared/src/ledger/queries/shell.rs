@@ -18,6 +18,7 @@ use crate::ledger::storage::traits::StorageHasher;
 use crate::ledger::storage::{DBIter, DB};
 use crate::ledger::storage_api::{self, ResultExt, StorageRead};
 use crate::tendermint::merkle::proof::Proof;
+use crate::tendermint_proto::crypto::{ProofOp, ProofOps};
 use crate::types::storage::{self, Epoch, PrefixValue};
 #[cfg(any(test, feature = "async-client"))]
 use crate::types::transaction::TxResult;
@@ -208,15 +209,15 @@ where
     {
         (Some(value), _gas) => {
             let proof = if request.prove {
-                let proof = ctx
+                let proof: crate::tendermint::merkle::proof::Proof = ctx
                     .storage
                     .get_existence_proof(
                         &storage_key,
                         value.clone().into(),
                         request.height,
                     )
-                    .into_storage_result()?;
-                let proof = proof_to_tm_proof(proof);
+                    .into_storage_result()?
+                    .into();
                 Some(proof.into())
             } else {
                 None
@@ -229,11 +230,11 @@ where
         }
         (None, _gas) => {
             let proof = if request.prove {
-                let proof = ctx
+                let proof: crate::tendermint::merkle::proof::Proof = ctx
                     .storage
                     .get_non_existence_proof(&storage_key, request.height)
-                    .into_storage_result()?;
-                let proof = proof_to_tm_proof(proof);
+                    .into_storage_result()?
+                    .into();
                 Some(proof.into())
             } else {
                 None
@@ -269,11 +270,11 @@ where
     let proof = if request.prove {
         let mut ops = vec![];
         for PrefixValue { key, value } in &data {
-            let mut proof: crate::tendermint::merkle::proof::Proof = ctx
+            let proof: crate::tendermint::merkle::proof::Proof = ctx
                 .storage
                 .get_existence_proof(key, value.clone().into(), request.height)
-                .into_storage_result()?;
-            let proof = proof_to_tm_proof(proof);
+                .into_storage_result()?
+                .into();
             let mut cur_ops: Vec<ProofOp> =
                 proof.ops.into_iter().map(|op| op.into()).collect();
             ops.append(&mut cur_ops);
@@ -454,40 +455,5 @@ mod test {
         assert!(has_balance_key);
 
         Ok(())
-    }
-}
-
-/// Convert merkle tree proof to tendermint proof
-fn proof_to_tm_proof(
-    merkle_tree::Proof {
-        key,
-        sub_proof,
-        base_proof,
-    }: merkle_tree::Proof,
-) -> tendermint::merkle::proof::Proof {
-    use crate::tendermint::merkle::proof::{Proof, ProofOp};
-    let mut data = vec![];
-    sub_proof
-        .encode(&mut data)
-        .expect("Encoding proof shouldn't fail");
-    let sub_proof_op = ProofOp {
-        field_type: "ics23_CommitmentProof".to_string(),
-        key: key.to_string().as_bytes().to_vec(),
-        data,
-    };
-
-    let mut data = vec![];
-    base_proof
-        .encode(&mut data)
-        .expect("Encoding proof shouldn't fail");
-    let base_proof_op = ProofOp {
-        field_type: "ics23_CommitmentProof".to_string(),
-        key: key.to_string().as_bytes().to_vec(),
-        data,
-    };
-
-    // Set ProofOps from leaf to root
-    Proof {
-        ops: vec![sub_proof_op, base_proof_op],
     }
 }

@@ -128,6 +128,7 @@ impl Ctx {
 }
 
 namada_proof_of_stake::impl_pos_read_only! {
+    type Error = crate::Error;
     impl namada_proof_of_stake::PosReadOnly for Ctx
 }
 

@@ -1,6 +1,7 @@
-use crate::ledger::events::log::EventLog;
 use crate::ledger::storage::{DBIter, Storage, StorageHasher, DB};
 use crate::ledger::storage_api;
+use crate::tendermint_proto::crypto::ProofOps;
+use crate::ledger::events::log::EventLog;
 use crate::tendermint::merkle::proof::Proof;
 use crate::types::storage::BlockHeight;
 #[cfg(feature = "wasm-runtime")]

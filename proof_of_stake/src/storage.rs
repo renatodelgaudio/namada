@@ -2,6 +2,7 @@
 
 use namada_core::ledger::storage::types::{decode, encode};
 use namada_core::ledger::storage::{self, Storage, StorageHasher};
+use namada_core::ledger::storage_api;
 use namada_core::types::address::Address;
 use namada_core::types::storage::{DbKeySeg, Key, KeySeg};
 use namada_core::types::{key, token};
@@ -9,8 +10,40 @@ use rust_decimal::Decimal;
 
 use super::ADDRESS;
 use crate::parameters::PosParams;
-pub use crate::types::*;
+pub use crate::types::{CommissionRates, ValidatorStates};
 use crate::{types, PosBase, PosReadOnly};
+
+// TODO: these are not needed anymore, remove together with all the generics in
+// this crate
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type ValidatorConsensusKeys =
+    crate::types::ValidatorConsensusKeys<key::common::PublicKey>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type ValidatorDeltas = crate::types::ValidatorDeltas<token::Change>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type Bonds = crate::types::Bonds<token::Amount>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type Unbonds = crate::types::Unbonds<token::Amount>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type ValidatorSets = crate::types::ValidatorSets<Address>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type BondId = crate::types::BondId<Address>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type GenesisValidator = crate::types::GenesisValidator<
+    Address,
+    token::Amount,
+    key::common::PublicKey,
+>;
+
+/// Alias for a PoS type with the same name with concrete type parameters
+pub type TotalDeltas = crate::types::TotalDeltas<token::Change>;
 
 const PARAMS_STORAGE_KEY: &str = "params";
 const VALIDATOR_STORAGE_PREFIX: &str = "validator";
@@ -602,13 +635,22 @@ where
 #[macro_export]
 macro_rules! impl_pos_read_only {
     (
+        // Type error type has to be declared before the impl.
+        // This error type must `impl From<storage_api::Error> for $error`.
+        type $error:tt = $err_ty:ty ;
         // Matches anything, so that we can use lifetimes and generic types.
         // This expects `impl(<.*>)? PoSReadOnly for $ty(<.*>)?`.
         $( $any:tt )* )
     => {
         $( $any )*
         {
-            const POS_ADDRESS: namada_core::types::address::Address = $crate::ADDRESS;
+            type Address = namada_core::types::address::Address;
+            type $error = $err_ty;
+            type PublicKey = namada_core::types::key::common::PublicKey;
+            type TokenAmount = namada_core::types::token::Amount;
+            type TokenChange = namada_core::types::token::Change;
+
+            const POS_ADDRESS: Self::Address = $crate::ADDRESS;
 
             fn staking_token_address(&self) -> namada_core::types::address::Address {
                 namada_core::ledger::storage_api::StorageRead::get_native_token(self)
@@ -710,6 +752,7 @@ macro_rules! impl_pos_read_only {
 }
 
 impl_pos_read_only! {
+    type Error = storage_api::Error;
     impl<DB, H> PosReadOnly for Storage<DB, H>
         where
             DB: storage::DB + for<'iter> storage::DBIter<'iter> +'static,

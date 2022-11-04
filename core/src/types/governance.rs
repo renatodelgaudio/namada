@@ -15,7 +15,6 @@ use crate::types::key::common::{self, Signature};
 use crate::types::key::SigScheme;
 use crate::types::storage::Epoch;
 use crate::types::token::SCALE;
-use crate::types::transaction::governance::InitProposalData;
 
 /// Type alias for vote power
 pub type VotePower = u128;
