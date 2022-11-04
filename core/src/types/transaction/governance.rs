@@ -1,4 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use namada_core::types::governance::{Proposal, ProposalError};
 use serde::{Deserialize, Serialize};
 
 use crate::types::address::Address;

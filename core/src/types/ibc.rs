@@ -3,6 +3,20 @@
 use std::collections::HashMap;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use thiserror::Error;
+
+use crate::ibc::events::{Error as IbcEventError, IbcEvent as RawIbcEvent};
+use crate::tendermint::abci::Event as AbciEvent;
+
+#[allow(missing_docs)]
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("IBC event error: {0}")]
+    IbcEvent(IbcEventError),
+}
+
+/// Conversion functions result
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Wrapped IbcEvent
 #[derive(

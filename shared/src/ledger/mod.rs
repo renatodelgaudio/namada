@@ -2,6 +2,9 @@
 
 pub mod eth_bridge;
 pub mod events;
+pub use namada_core::ledger::{gas, governance};
+pub use namada_core::ledger::parameters;
+
 pub mod ibc;
 pub mod masp;
 pub mod native_vp;
@@ -10,8 +13,5 @@ pub mod pos;
 pub mod protocol;
 pub mod queries;
 pub mod storage;
-pub mod vp_host_fns;
-
-pub use namada_core::ledger::{
-    gas, governance, parameters, storage_api, tx_env, vp_env,
-};
+pub mod storage_api;
+pub use namada_core::ledger::{tx_env, vp_env};

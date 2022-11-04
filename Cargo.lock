@@ -1779,9 +1779,9 @@ dependencies = [
 
 [[package]]
 name = "ed25519-consensus"
-version = "1.2.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "758e2a0cd8a6cdf483e1d369e7d081647e00b88d8953e34d8f2cbba05ae28368"
+checksum = "542217a53411d471743362251a5a1770a667cb0cc0384c9be2c0952bd70a7275"
 dependencies = [
  "curve25519-dalek-ng",
  "hex",
@@ -8091,9 +8091,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.5.7"
+version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c394b5bd0c6f669e7275d9c20aa90ae064cb22e75a1cad54e1b34088034b149f"
+checksum = "94693807d016b2f2d2e14420eb3bfcca689311ff775dcf113d74ea624b7cdf07"
 dependencies = [
  "zeroize_derive",
 ]

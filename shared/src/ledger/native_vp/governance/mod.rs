@@ -1,16 +1,19 @@
 //! Governance VP
 
+/// utility functions
 pub mod utils;
 
 use std::collections::BTreeSet;
 
-use namada_core::ledger::governance::storage as gov_storage;
-use namada_core::ledger::storage;
+use borsh::BorshDeserialize;
+use namada_core::ledger::native_vp;
 use namada_core::ledger::vp_env::VpEnv;
+pub use namada_core::ledger::{parameters, storage};
 use thiserror::Error;
 use utils::is_valid_validator_voting_period;
 
-use crate::ledger::native_vp;
+use self::storage as gov_storage;
+use super::storage_api::StorageRead;
 use crate::ledger::native_vp::{Ctx, NativeVp};
 use crate::ledger::pos::{self, BondId, Bonds};
 use crate::ledger::storage_api::StorageRead;
