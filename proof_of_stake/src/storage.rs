@@ -3,7 +3,7 @@
 use namada_core::ledger::storage::types::{decode, encode};
 use namada_core::ledger::storage::{self, Storage, StorageHasher};
 
-use namada_core::types::address::Address;
+use namada_core::types::address::{self, Address};
 use namada_core::types::storage::{DbKeySeg, Key, KeySeg};
 use namada_core::types::{key, token};
 use rust_decimal::Decimal;
@@ -27,6 +27,8 @@ const BOND_STORAGE_KEY: &str = "bond";
 const UNBOND_STORAGE_KEY: &str = "unbond";
 const VALIDATOR_SET_STORAGE_KEY: &str = "validator_set";
 const TOTAL_DELTAS_STORAGE_KEY: &str = "total_deltas";
+
+const ADDRESS: Address = address::POS;
 
 /// Is the given key a PoS storage key?
 pub fn is_pos_key(key: &Key) -> bool {

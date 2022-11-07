@@ -43,7 +43,15 @@ pub fn init_genesis_storage<'a, DB, H>(
 {
     storage
         .init_genesis(params, validators, current_epoch)
-        .expect("Initialize PoS genesis storage")
+        .expect("Initialize PoS genesis storage");
+
+    namada_proof_of_stake::init_genesis_NEW(
+        storage,
+        params,
+        validators,
+        current_epoch,
+    )
+    .expect("Initialize PoS genesis storage");
 }
 
 

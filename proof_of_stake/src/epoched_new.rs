@@ -1,3 +1,6 @@
+//! [`Epoched`] and [`EpochedDelta`] are structures for data that is set for
+//! future (and possibly past) epochs.
+
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -10,8 +13,8 @@ use namada_core::types::storage::{self, Epoch};
 
 use crate::parameters::PosParams;
 
-/// Discrete epoched data
-struct Epoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64> {
+/// Discrete epoched data handle
+pub struct Epoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64> {
     storage_prefix: storage::Key,
     future_epochs: PhantomData<FutureEpochs>,
     data: PhantomData<Data>,
@@ -23,7 +26,8 @@ where
     FutureEpochs: EpochOffset,
     Data: BorshSerialize + BorshDeserialize + 'static + Debug,
 {
-    fn open(key: storage::Key) -> Self {
+    /// Open the handle
+    pub fn open(key: storage::Key) -> Self {
         Self {
             storage_prefix: key,
             future_epochs: PhantomData,
