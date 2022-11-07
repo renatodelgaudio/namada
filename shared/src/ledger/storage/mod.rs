@@ -10,7 +10,7 @@ pub mod write_log;
 
 use core::fmt::Debug;
 use std::array;
-use std::collections::BTreeSet;
+use std::collections::btree_set;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use ferveo_common::TendermintValidator;
@@ -24,7 +24,7 @@ use crate::ledger::parameters::EpochDuration;
 use crate::ledger::pos::namada_proof_of_stake::types::VotingPower;
 use crate::ledger::pos::namada_proof_of_stake::PosBase;
 use crate::ledger::pos::types::WeightedValidator;
-use crate::ledger::pos::PosParams;
+use crate::ledger::pos::{PosParams, ValidatorSets};
 use crate::ledger::storage::merkle_tree::{
     Error as MerkleTreeError, MerkleRoot,
 };
@@ -905,27 +905,43 @@ where
     }
 }
 
-impl<D, H> QueriesExt for Storage<D, H>
+pub struct GetActiveValidatorsIntoIter {
+    epoch: Epoch,
+    sets: ValidatorSets,
+}
+
+impl<'it> IntoIterator for &'it GetActiveValidatorsIntoIter {
+    type IntoIter = btree_set::Iter<'it, WeightedValidator<Address>>;
+    type Item = &'it WeightedValidator<Address>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.sets
+            .get(self.epoch)
+            .expect("Validators for an epoch should be known")
+            .active
+            .iter()
+    }
+}
+
+impl<'active_validators, D, H> QueriesExt<'active_validators> for Storage<D, H>
 where
     D: DB + for<'iter> DBIter<'iter>,
     H: StorageHasher,
 {
+    type ActiveValidatorsIter = GetActiveValidatorsIntoIter;
+
     fn get_active_validators(
         &self,
         epoch: Option<Epoch>,
-    ) -> BTreeSet<WeightedValidator<Address>> {
+    ) -> GetActiveValidatorsIntoIter {
         let epoch = epoch.unwrap_or_else(|| self.get_current_epoch().0);
-        let validator_set = self.read_validator_set();
-        validator_set
-            .get(epoch)
-            .expect("Validators for an epoch should be known")
-            .active
-            .clone()
+        let sets = self.read_validator_set();
+        GetActiveValidatorsIntoIter { sets, epoch }
     }
 
     fn get_total_voting_power(&self, epoch: Option<Epoch>) -> VotingPower {
         self.get_active_validators(epoch)
-            .iter()
+            .into_iter()
             .map(|validator| u64::from(validator.voting_power))
             .sum::<u64>()
             .into()
@@ -976,7 +992,7 @@ where
             .expect("Serializing public key should not fail");
         let epoch = epoch.unwrap_or_else(|| self.get_current_epoch().0);
         self.get_active_validators(Some(epoch))
-            .iter()
+            .into_iter()
             .find(|validator| {
                 let pk_key = key::protocol_pk_key(&validator.address);
                 match self.read(&pk_key) {
@@ -1017,7 +1033,7 @@ where
     ) -> queries::Result<(VotingPower, key::common::PublicKey)> {
         let epoch = epoch.unwrap_or_else(|| self.get_current_epoch().0);
         self.get_active_validators(Some(epoch))
-            .iter()
+            .into_iter()
             .find(|validator| address == &validator.address)
             .map(|validator| {
                 let protocol_pk_key = key::protocol_pk_key(&validator.address);
@@ -1136,33 +1152,36 @@ where
     ) -> Box<dyn Iterator<Item = (EthAddrBook, Address, VotingPower)> + 'db>
     {
         let epoch = epoch.unwrap_or_else(|| self.get_current_epoch().0);
-        Box::new(self.get_active_validators(Some(epoch)).into_iter().map(
-            move |validator| {
-                let hot_key_addr = self
-                    .get_ethbridge_from_namada_addr(
-                        &validator.address,
-                        Some(epoch),
-                    )
-                    .expect(
-                        "All Namada validators should have an Ethereum bridge \
-                         key",
-                    );
-                let cold_key_addr = self
-                    .get_ethgov_from_namada_addr(
-                        &validator.address,
-                        Some(epoch),
-                    )
-                    .expect(
-                        "All Namada validators should have an Ethereum \
-                         governance key",
-                    );
-                let eth_addr_book = EthAddrBook {
-                    hot_key_addr,
-                    cold_key_addr,
-                };
-                (eth_addr_book, validator.address, validator.voting_power)
-            },
-        ))
+        Box::new(
+            self.get_active_validators(Some(epoch))
+                .into_iter()
+                .cloned()
+                .map(move |validator| {
+                    let hot_key_addr = self
+                        .get_ethbridge_from_namada_addr(
+                            &validator.address,
+                            Some(epoch),
+                        )
+                        .expect(
+                            "All Namada validators should have an Ethereum \
+                             bridge key",
+                        );
+                    let cold_key_addr = self
+                        .get_ethgov_from_namada_addr(
+                            &validator.address,
+                            Some(epoch),
+                        )
+                        .expect(
+                            "All Namada validators should have an Ethereum \
+                             governance key",
+                        );
+                    let eth_addr_book = EthAddrBook {
+                        hot_key_addr,
+                        cold_key_addr,
+                    };
+                    (eth_addr_book, validator.address, validator.voting_power)
+                }),
+        )
     }
 }
 
