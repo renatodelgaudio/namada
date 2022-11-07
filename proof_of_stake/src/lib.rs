@@ -14,6 +14,7 @@
 
 pub mod btree_set;
 pub mod epoched;
+pub mod epoched_new;
 pub mod parameters;
 pub mod storage;
 pub mod types;

@@ -2,13 +2,13 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use namada_core::ledger::storage_api;
+use namada_core::ledger::storage_api::collections::lazy_map::LazyMap;
+use namada_core::ledger::storage_api::collections::LazyCollection;
+use namada_core::ledger::storage_api::{StorageRead, StorageWrite};
+use namada_core::types::storage::{self, Epoch};
 
-use super::collections::LazyCollection;
-use super::{StorageRead, StorageWrite};
-use crate::ledger::pos::PosParams;
-use crate::ledger::storage_api;
-use crate::ledger::storage_api::collections::lazy_map::LazyMap;
-use crate::types::storage::{self, Epoch};
+use crate::parameters::PosParams;
 
 /// Discrete epoched data
 struct Epoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64> {
