@@ -527,6 +527,8 @@ impl EpochOffset for OffsetPipelinePlusUnbondingLen {
 /// Offset length dynamic choice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DynEpochOffset {
+    /// Offset at pipeline length - 1
+    PipelineLenMinusOne,
     /// Offset at pipeline length.
     PipelineLen,
     /// Offset at unbonding length.
