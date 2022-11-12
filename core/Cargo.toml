@@ -97,6 +97,7 @@ tendermint-proto-abcipp = {package = "tendermint-proto", git = "https://github.c
 thiserror = "1.0.30"
 tracing = "0.1.30"
 zeroize = {version = "1.5.5", features = ["zeroize_derive"]}
+regex = "1"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

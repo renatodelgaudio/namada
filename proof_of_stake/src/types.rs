@@ -9,6 +9,8 @@ use std::ops::Add;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use namada_core::types::address::Address;
+use namada_core::ledger::storage_api::collections::lazy_map::LazyMap;
+use namada_core::ledger::storage_api::collections::LazyCollection;
 use namada_core::types::key::common;
 use namada_core::types::storage::Epoch;
 use namada_core::types::token;
@@ -25,6 +27,37 @@ pub type ValidatorConsensusKeys_NEW = crate::epoched_new::Epoched<
     crate::epoched_new::OffsetPipelineLen,
     0,
 >;
+
+/// Epoched validator's state.
+pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
+    ValidatorState,
+    crate::epoched_new::OffsetPipelineLen,
+    0
+>;
+
+/// Epoched validator sets.
+pub type ValidatorSets_NEW = crate::epoched_new::Epoched<
+    ValidatorSet_NEW,
+    crate::epoched_new::OffsetPipelineLen,
+    0
+>;
+
+/// Epoched validator's deltas.
+pub type ValidatorDeltas_NEW = crate::epoched_new::EpochedDelta<
+    token::Change,
+    // TODO: check the offsets
+    crate::epoched_new::OffsetUnbondingLen,
+    21,
+>;
+
+/// Epoched validator's bonds
+pub type Bonds_NEW = crate::epoched_new::Epoched<
+    Bond_NEW,
+    // TODO: check the offsets
+    crate::epoched_new::OffsetUnbondingLen,
+    21,
+>;
+
 /// Epoched validator's consensus key.
 pub type ValidatorConsensusKeys = Epoched<common::PublicKey, OffsetPipelineLen>;
 /// Epoched validator's state.
@@ -180,6 +213,8 @@ pub struct ValidatorSet {
     pub inactive: BTreeSet<WeightedValidator>,
 }
 
+pub type ValidatorSet_NEW = ValidatorSet<Address>;
+
 /// Validator's state.
 #[derive(
     Debug,
@@ -221,6 +256,8 @@ pub struct Bond {
     /// epoch.
     pub neg_deltas: token::Amount,
 }
+
+type Bond_NEW = LazyMap<Address, LazyMap<Address, LazyMap<(Epoch, Epoch), token::Amount>>>;
 
 /// An unbond contains unbonded tokens from a validator's self-bond or a
 /// delegation from a regular account to a validator.

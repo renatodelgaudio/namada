@@ -29,6 +29,7 @@ use epoched::{
     DynEpochOffset, EpochOffset, Epoched, EpochedDelta, OffsetPipelineLen,
 };
 use namada_core::ledger::storage_api::{self, StorageRead, StorageWrite};
+use namada_core::ledger::storage_api::collections::{LazyCollection, LazyMap};
 use namada_core::types::address::{self, Address, InternalAddress};
 use namada_core::types::{key::common, token, storage::Epoch};
 use parameters::PosParams;
@@ -39,7 +40,8 @@ use types::{
     Slash, SlashType, Slashes, TotalDeltas, Unbond, Unbonds,
     ValidatorConsensusKeys, ValidatorConsensusKeys_NEW, ValidatorSet,
     ValidatorSetUpdate, ValidatorSets, ValidatorState, ValidatorStates,
-    ValidatorDeltas
+    ValidatorDeltas, ValidatorStates_NEW,
+    ValidatorDeltas_NEW, ValidatorSets_NEW, BondId_NEW
 };
 
 use crate::btree_set::BTreeSetShims;
@@ -1640,6 +1642,10 @@ fn withdraw_unbonds(
     })
 }
 
+// ------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
 impl From<BecomeValidatorError> for storage_api::Error {
     fn from(err: BecomeValidatorError) -> Self {
         Self::new(err)
@@ -1670,6 +1676,12 @@ impl From<CommissionRateChangeError> for storage_api::Error {
     }
 }
 
+/// Get the storage handle to the Validator sets
+pub fn validator_sets_handle() -> ValidatorSets_NEW {
+    let key = storage::validator_set_key();
+    crate::epoched_new::Epoched::open(key)
+}
+
 /// Get the storage handle to a PoS validator's consensus key (used for
 /// signing block votes).
 pub fn validator_consensus_key_handle(
@@ -1679,6 +1691,33 @@ pub fn validator_consensus_key_handle(
     crate::epoched_new::Epoched::open(key)
 }
 
+/// Get the storage handle to a PoS validator's state
+pub fn validator_state_handle(
+    validator: &Address
+) -> ValidatorStates_NEW {
+    let key = storage::validator_state_key(&validator);
+    crate::epoched_new::Epoched::open(key)
+}
+
+/// Get the storage handle to a PoS validator's deltas
+pub fn validator_deltas_handle(
+    validator: &Address
+) -> ValidatorDeltas_NEW {
+    let key = storage::validator_total_deltas_key(&validator);
+    crate::epoched_new::EpochedDelta::open(key)
+}
+
+/// Get the storage handle to a bonds
+pub fn bond_handle(
+    source: &Address,
+    validator: &Address
+) -> LazyMap<Epoch, token::Amount> {
+    let bond_id = BondId_NEW {source: source.clone(), validator: validator.clone()};
+    let key = storage::bond_key(&bond_id);
+    LazyMap::open(key)
+}
+
+/// new init genesis
 pub fn init_genesis_NEW<S>(
     storage: &mut S,
     params: &PosParams,
@@ -1688,6 +1727,7 @@ pub fn init_genesis_NEW<S>(
 where
     S: for<'iter> StorageRead<'iter> + StorageWrite,
 {
+    // validator_sets_handle().init_at_genesis(storage, value, current_epoch)
     for GenesisValidator {
         address,
         tokens,
@@ -1698,6 +1738,17 @@ where
             storage,
             consensus_key,
             current_epoch,
+        )?;
+        validator_state_handle(&address).init_at_genesis(
+            storage,
+            ValidatorState::Candidate,
+            current_epoch
+        )?;
+        let delta = token::Change::from(tokens);
+        validator_deltas_handle(&address).init_at_genesis(
+            storage,
+            delta,
+            current_epoch
         )?;
     }
 
@@ -1732,4 +1783,113 @@ where
     let handle = validator_consensus_key_handle(&validator);
     let offset = OffsetPipelineLen::value(params);
     handle.set(storage, consensus_key, current_epoch, offset)
+}
+
+/// Read PoS validator's delta value.
+pub fn read_validator_delta<S>(
+    storage: &S,
+    params: &PosParams,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<token::Change>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = validator_deltas_handle(&validator);
+    handle.get_delta_val(storage, epoch, params)
+}
+
+/// Read PoS validator's stake (sum of deltas).
+pub fn read_validator_stake<S>(
+    storage: &S,
+    params: &PosParams,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<token::Change>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = validator_deltas_handle(&validator);
+    handle.get_sum(storage, epoch, params)
+}
+
+/// Write PoS validator's consensus key (used for signing block votes).
+/// Note: for EpochedDelta, write the value to change storage by
+pub fn write_validator_deltas<S>(
+    storage: &mut S,
+    params: &PosParams,
+    validator: &Address,
+    delta: token::Change,
+    current_epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let handle = validator_deltas_handle(&validator);
+    let offset = OffsetPipelineLen::value(params);
+
+    // TODO: either use read_validator_deltas here to update the value properly
+    // or use a new or updated method to update the Data val for EpochedDelta (set currently just sets the val like discrete Epoched)
+    handle.set(storage, delta, current_epoch, offset)
+}
+/// Read PoS validator's state.
+pub fn read_validator_state<S>(
+    storage: &S,
+    params: &PosParams,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<ValidatorState>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = validator_state_handle(&validator);
+    handle.get(storage, epoch, params)
+}
+
+/// Write PoS validator's consensus key (used for signing block votes).
+pub fn write_validator_state<S>(
+    storage: &mut S,
+    params: &PosParams,
+    validator: &Address,
+    state: ValidatorState,
+    current_epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let handle = validator_state_handle(&validator);
+    let offset = OffsetPipelineLen::value(params);
+    handle.set(storage, state, current_epoch, offset)
+}
+
+/// Read PoS validator's bonds
+pub fn read_bonds<S>(
+    storage: &S,
+    params: &PosParams,
+    source: &Address,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<LazyMap<(Epoch, Epoch), token::Amount>>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    // What exactly should we have this read? Should we look up by source, validator?
+    // Should it be the sum of all bonds?
+    todo!()
+}
+
+/// Write PoS validator's consensus key (used for signing block votes).
+pub fn write_bond<S>(
+    storage: &mut S,
+    params: &PosParams,
+    validator: &Address,
+    state: ValidatorState,
+    current_epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let handle = validator_state_handle(&validator);
+    let offset = OffsetPipelineLen::value(params);
+    handle.set(storage, state, current_epoch, offset)
 }

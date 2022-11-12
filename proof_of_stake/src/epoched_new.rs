@@ -185,7 +185,7 @@ where
                 }
             }
             let key = self.get_last_update_storage_key();
-            storage.write(&key, expected_epoch)?;
+            storage.write(&key, current_epoch)?;
         }
         Ok(())
     }
@@ -425,7 +425,7 @@ where
                 }
             }
             let key = self.get_last_update_storage_key();
-            storage.write(&key, expected_oldest_epoch)?;
+            storage.write(&key, current_epoch)?;
         }
         Ok(())
     }

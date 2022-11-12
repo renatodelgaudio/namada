@@ -13,6 +13,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use data_encoding::BASE32HEX_NOPAD;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
+use regex::Regex;
 
 use crate::bytes::ByteBuf;
 use crate::types::address::{self, Address};
@@ -880,6 +881,31 @@ impl_int_key_seg!(u16, i16, 2);
 impl_int_key_seg!(u32, i32, 4);
 impl_int_key_seg!(u64, i64, 8);
 impl_int_key_seg!(u128, i128, 16);
+
+impl KeySeg for (Epoch, Epoch) {
+    fn parse(string: String) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let re = Regex::new(r"\((\d{1}),(\d{1})\)").unwrap();
+        let caps = re.captures(string.as_str()).unwrap();
+        let first = caps.get(1).map(|m| m.as_str().to_owned()).unwrap();
+        let second = caps.get(2).map(|m| m.as_str().to_owned()).unwrap();
+        
+        let first = u64::parse(first)?;
+        let second = u64::parse(second)?;
+
+        Ok((Epoch(first), Epoch(second)))
+    }
+
+    fn raw(&self) -> String {
+        format!("({},{})",self.0,self.1)
+    }
+
+    fn to_db_key(&self) -> DbKeySeg {
+        DbKeySeg::StringSeg(self.raw())
+    }
+}
 
 impl KeySeg for Epoch {
     fn parse(string: String) -> Result<Self>
