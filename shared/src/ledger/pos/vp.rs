@@ -33,7 +33,8 @@ use crate::ledger::pos::{
     is_validator_max_commission_rate_change_key, is_validator_state_key,
 };
 use crate::ledger::storage::{self as ledger_storage, StorageHasher};
-use crate::ledger::storage_api::StorageRead;
+use crate::ledger::storage_api::{StorageRead};
+use crate::ledger::vp_env::VpEnv;
 use crate::types::address::{Address, InternalAddress};
 use crate::types::storage::{Key, KeySeg};
 use crate::types::token;

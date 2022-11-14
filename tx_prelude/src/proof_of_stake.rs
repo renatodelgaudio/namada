@@ -128,7 +128,6 @@ impl Ctx {
 }
 
 namada_proof_of_stake::impl_pos_read_only! {
-    type Error = crate::Error;
     impl namada_proof_of_stake::PosReadOnly for Ctx
 }
 
@@ -178,7 +177,7 @@ impl namada_proof_of_stake::PosActions for Ctx {
         key: &Address,
         value: Decimal,
     ) -> storage_api::Result<()> {
-        self.write(&validator_max_commission_rate_change_key(key), value)
+        self.write(&validator_max_commission_rate_change_key(key), &value)
     }
 
     fn write_validator_deltas(

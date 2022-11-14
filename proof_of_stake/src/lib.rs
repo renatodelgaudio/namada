@@ -1640,56 +1640,32 @@ fn withdraw_unbonds(
     })
 }
 
-impl From<BecomeValidatorError<namada_core::types::address::Address>>
-    for storage_api::Error
-{
-    fn from(
-        err: BecomeValidatorError<namada_core::types::address::Address>,
-    ) -> Self {
+impl From<BecomeValidatorError> for storage_api::Error {
+    fn from(err: BecomeValidatorError) -> Self {
         Self::new(err)
     }
 }
 
-impl From<BondError<namada_core::types::address::Address>>
-    for storage_api::Error
-{
-    fn from(err: BondError<namada_core::types::address::Address>) -> Self {
+impl From<BondError> for storage_api::Error {
+    fn from(err: BondError) -> Self {
         Self::new(err)
     }
 }
 
-impl
-    From<
-        UnbondError<
-            namada_core::types::address::Address,
-            namada_core::types::token::Amount,
-        >,
-    > for storage_api::Error
-{
-    fn from(
-        err: UnbondError<
-            namada_core::types::address::Address,
-            namada_core::types::token::Amount,
-        >,
-    ) -> Self {
+impl From<UnbondError> for storage_api::Error {
+    fn from(err: UnbondError) -> Self {
         Self::new(err)
     }
 }
 
-impl From<WithdrawError<namada_core::types::address::Address>>
-    for storage_api::Error
-{
-    fn from(err: WithdrawError<namada_core::types::address::Address>) -> Self {
+impl From<WithdrawError> for storage_api::Error {
+    fn from(err: WithdrawError) -> Self {
         Self::new(err)
     }
 }
 
-impl From<CommissionRateChangeError<namada_core::types::address::Address>>
-    for storage_api::Error
-{
-    fn from(
-        err: CommissionRateChangeError<namada_core::types::address::Address>,
-    ) -> Self {
+impl From<CommissionRateChangeError> for storage_api::Error {
+    fn from(err: CommissionRateChangeError) -> Self {
         Self::new(err)
     }
 }
