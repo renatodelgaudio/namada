@@ -244,7 +244,7 @@ impl StorageWrite for Ctx {
 }
 
 impl TxEnv<'_> for Ctx {
-    type IbcEvent = namada::types::ibc::IbcEvent;
+    type IbcEvent = namada_core::types::ibc::IbcEvent;
 
     fn get_block_time(&self) -> Result<time::Rfc3339String, Error> {
         let read_result = unsafe { namada_tx_get_block_time() };

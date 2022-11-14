@@ -37,7 +37,7 @@ pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
 
 /// Epoched validator sets.
 pub type ValidatorSets_NEW = crate::epoched_new::Epoched<
-    ValidatorSet_NEW,
+    ValidatorSet,
     crate::epoched_new::OffsetPipelineLen,
     0
 >;
@@ -100,8 +100,6 @@ pub struct GenesisValidator {
     /// Maximum change in commission rate permitted per epoch
     pub max_commission_rate_change: Decimal,
 }
-pub type GenesisValidator_NEW =
-    GenesisValidator<Address, token::Amount, key::common::PublicKey>;
 
 /// An update of the active and inactive validator set.
 #[derive(Debug, Clone)]
@@ -135,26 +133,6 @@ pub struct ActiveValidator {
     BorshSchema,
 )]
 pub struct BondId {
-    /// (Un)bond's source address is the owner of the bonded tokens.
-    pub source: Address,
-    /// (Un)bond's validator address.
-    pub validator: Address,
-}
-
-/// ID of a bond and/or an unbond.
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    BorshDeserialize,
-    BorshSerialize,
-    BorshSchema,
-)]
-pub struct BondId_NEW {
     /// (Un)bond's source address is the owner of the bonded tokens.
     pub source: Address,
     /// (Un)bond's validator address.
@@ -212,8 +190,6 @@ pub struct ValidatorSet {
     /// All the other validators that are not active
     pub inactive: BTreeSet<WeightedValidator>,
 }
-
-pub type ValidatorSet_NEW = ValidatorSet<Address>;
 
 /// Validator's state.
 #[derive(

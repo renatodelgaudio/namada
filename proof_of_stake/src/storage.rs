@@ -3,7 +3,7 @@
 use namada_core::ledger::storage::types::{decode, encode};
 use namada_core::ledger::storage::{self, Storage, StorageHasher};
 
-use namada_core::types::address::{self, Address};
+use namada_core::types::address::Address;
 use namada_core::types::storage::{DbKeySeg, Key, KeySeg};
 use namada_core::types::{key, token};
 use rust_decimal::Decimal;
@@ -18,7 +18,7 @@ const VALIDATOR_STORAGE_PREFIX: &str = "validator_NEW";
 const VALIDATOR_ADDRESS_RAW_HASH: &str = "address_raw_hash_NEW";
 const VALIDATOR_CONSENSUS_KEY_STORAGE_KEY: &str = "consensus_key_NEW";
 const VALIDATOR_STATE_STORAGE_KEY: &str = "state_NEW";
-const VALIDATOR_ELTAS_STORAGE_KEY: &str = "validator_deltas_NEW";
+const VALIDATOR_DELTAS_STORAGE_KEY: &str = "validator_deltas_NEW";
 const VALIDATOR_COMMISSION_RATE_STORAGE_KEY: &str = "commission_rate_NEW";
 const VALIDATOR_MAX_COMMISSION_CHANGE_STORAGE_KEY: &str =
     "max_commission_rate_change_NEW";
@@ -27,8 +27,6 @@ const BOND_STORAGE_KEY: &str = "bond_NEW";
 const UNBOND_STORAGE_KEY: &str = "unbond_NEW";
 const VALIDATOR_SET_STORAGE_KEY: &str = "validator_set_NEW";
 const TOTAL_DELTAS_STORAGE_KEY: &str = "total_deltas_NEW";
-
-const ADDRESS: Address = address::POS;
 
 /// Is the given key a PoS storage key?
 pub fn is_pos_key(key: &Key) -> bool {

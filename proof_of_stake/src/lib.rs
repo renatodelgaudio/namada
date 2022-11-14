@@ -36,12 +36,12 @@ use parameters::PosParams;
 use rust_decimal::Decimal;
 use thiserror::Error;
 use types::{
-    ActiveValidator, Bonds, CommissionRate, Epoch, GenesisValidator, GenesisValidator_NEW,
+    ActiveValidator, Bonds, CommissionRates, GenesisValidator,
     Slash, SlashType, Slashes, TotalDeltas, Unbond, Unbonds,
     ValidatorConsensusKeys, ValidatorConsensusKeys_NEW, ValidatorSet,
     ValidatorSetUpdate, ValidatorSets, ValidatorState, ValidatorStates,
     ValidatorDeltas, ValidatorStates_NEW,
-    ValidatorDeltas_NEW, ValidatorSets_NEW, BondId_NEW
+    ValidatorDeltas_NEW, ValidatorSets_NEW
 };
 
 use crate::btree_set::BTreeSetShims;
@@ -1703,7 +1703,7 @@ pub fn validator_state_handle(
 pub fn validator_deltas_handle(
     validator: &Address
 ) -> ValidatorDeltas_NEW {
-    let key = storage::validator_total_deltas_key(&validator);
+    let key = storage::validator_deltas_key(&validator);
     crate::epoched_new::EpochedDelta::open(key)
 }
 
@@ -1712,7 +1712,7 @@ pub fn bond_handle(
     source: &Address,
     validator: &Address
 ) -> LazyMap<Epoch, token::Amount> {
-    let bond_id = BondId_NEW {source: source.clone(), validator: validator.clone()};
+    let bond_id = BondId {source: source.clone(), validator: validator.clone()};
     let key = storage::bond_key(&bond_id);
     LazyMap::open(key)
 }
@@ -1721,7 +1721,7 @@ pub fn bond_handle(
 pub fn init_genesis_NEW<S>(
     storage: &mut S,
     params: &PosParams,
-    validators: impl Iterator<Item = GenesisValidator_NEW> + Clone,
+    validators: impl Iterator<Item = GenesisValidator> + Clone,
     current_epoch: namada_core::types::storage::Epoch,
 ) -> storage_api::Result<()>
 where
@@ -1732,6 +1732,8 @@ where
         address,
         tokens,
         consensus_key,
+        commission_rate,
+        max_commission_rate_change
     } in validators
     {
         validator_consensus_key_handle(&address).init_at_genesis(
@@ -1761,7 +1763,7 @@ pub fn read_validator_consensus_key<S>(
     params: &PosParams,
     validator: &Address,
     epoch: namada_core::types::storage::Epoch,
-) -> storage_api::Result<Option<key::common::PublicKey>>
+) -> storage_api::Result<Option<common::PublicKey>>
 where
     S: for<'iter> StorageRead<'iter>,
 {
@@ -1774,7 +1776,7 @@ pub fn write_validator_consensus_key<S>(
     storage: &mut S,
     params: &PosParams,
     validator: &Address,
-    consensus_key: key::common::PublicKey,
+    consensus_key: common::PublicKey,
     current_epoch: namada_core::types::storage::Epoch,
 ) -> storage_api::Result<()>
 where

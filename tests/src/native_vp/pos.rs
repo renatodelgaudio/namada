@@ -100,7 +100,7 @@
 
 use namada::ledger::pos::namada_proof_of_stake::PosBase;
 use namada::proof_of_stake::storage::GenesisValidator;
-use namada::proof_of_stake::PosParams;
+use namada::proof_of_stake::parameters::PosParams;
 use namada::types::storage::Epoch;
 
 use crate::tx::tx_host_env;
