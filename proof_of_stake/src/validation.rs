@@ -1530,7 +1530,8 @@ impl Validate {
                             && slash.epoch <= *end_epoch
                         {
                             let raw_delta: i128 = *delta;
-                            let current_slashed = decimal_mult_i128(slash.rate, raw_delta);
+                            let current_slashed =
+                                decimal_mult_i128(slash.rate, raw_delta);
                             *delta -= current_slashed;
                         }
                     }

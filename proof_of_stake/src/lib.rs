@@ -28,20 +28,23 @@ use std::num::TryFromIntError;
 use epoched::{
     DynEpochOffset, EpochOffset, Epoched, EpochedDelta, OffsetPipelineLen,
 };
-use namada_core::ledger::storage_api::{self, StorageRead, StorageWrite};
 use namada_core::ledger::storage_api::collections::{LazyCollection, LazyMap};
+use namada_core::ledger::storage_api::{self, StorageRead, StorageWrite};
 use namada_core::types::address::{self, Address, InternalAddress};
-use namada_core::types::{key::common, token, storage::Epoch};
+use namada_core::types::key::common;
+use namada_core::types::storage::Epoch;
+use namada_core::types::token;
 use parameters::PosParams;
 use rust_decimal::Decimal;
+use storage::{validator_max_commission_rate_change_key, validator_state_key};
 use thiserror::Error;
 use types::{
-    ActiveValidator, Bonds, CommissionRates, GenesisValidator,
-    Slash, SlashType, Slashes, TotalDeltas, Unbond, Unbonds,
-    ValidatorConsensusKeys, ValidatorConsensusKeys_NEW, ValidatorSet,
-    ValidatorSetUpdate, ValidatorSets, ValidatorState, ValidatorStates,
-    ValidatorDeltas, ValidatorStates_NEW,
-    ValidatorDeltas_NEW, ValidatorSets_NEW
+    ActiveValidator, Bond_NEW, Bonds, Bonds_NEW, CommissionRates,
+    CommissionRates_NEW, GenesisValidator, Slash, SlashType, Slashes,
+    TotalDeltas, TotalDeltas_NEW, Unbond, Unbonds, ValidatorConsensusKeys,
+    ValidatorConsensusKeys_NEW, ValidatorDeltas, ValidatorDeltas_NEW,
+    ValidatorSet, ValidatorSetUpdate, ValidatorSets, ValidatorSets_NEW,
+    ValidatorState, ValidatorStates, ValidatorStates_NEW,
 };
 
 use crate::btree_set::BTreeSetShims;
@@ -1687,34 +1690,52 @@ pub fn validator_sets_handle() -> ValidatorSets_NEW {
 pub fn validator_consensus_key_handle(
     validator: &Address,
 ) -> ValidatorConsensusKeys_NEW {
-    let key = storage::validator_consensus_key_key(&validator);
+    let key = storage::validator_consensus_key_key(validator);
     crate::epoched_new::Epoched::open(key)
 }
 
 /// Get the storage handle to a PoS validator's state
-pub fn validator_state_handle(
-    validator: &Address
-) -> ValidatorStates_NEW {
-    let key = storage::validator_state_key(&validator);
+pub fn validator_state_handle(validator: &Address) -> ValidatorStates_NEW {
+    let key = storage::validator_state_key(validator);
     crate::epoched_new::Epoched::open(key)
 }
 
 /// Get the storage handle to a PoS validator's deltas
-pub fn validator_deltas_handle(
-    validator: &Address
-) -> ValidatorDeltas_NEW {
-    let key = storage::validator_deltas_key(&validator);
+pub fn validator_deltas_handle(validator: &Address) -> ValidatorDeltas_NEW {
+    let key = storage::validator_deltas_key(validator);
     crate::epoched_new::EpochedDelta::open(key)
+}
+
+/// Get the storage handle to the total deltas
+pub fn total_deltas_handle() -> TotalDeltas_NEW {
+    let key = storage::total_deltas_key();
+    crate::epoched_new::EpochedDelta::open(key)
+}
+
+/// Get the storage handle to a PoS validator's commission rate
+pub fn validator_commission_rate_handle(
+    validator: &Address,
+) -> CommissionRates_NEW {
+    let key = storage::validator_commission_rate_key(validator);
+    crate::epoched_new::Epoched::open(key)
 }
 
 /// Get the storage handle to a bonds
 pub fn bond_handle(
     source: &Address,
-    validator: &Address
-) -> LazyMap<Epoch, token::Amount> {
-    let bond_id = BondId {source: source.clone(), validator: validator.clone()};
-    let key = storage::bond_key(&bond_id);
-    LazyMap::open(key)
+    validator: &Address,
+    get_remaining: bool,
+) -> Bonds_NEW {
+    let bond_id = BondId {
+        source: source.clone(),
+        validator: validator.clone(),
+    };
+    let key = if get_remaining {
+        storage::bond_remaining_key(&bond_id)
+    } else {
+        storage::bond_amount_key(&bond_id)
+    };
+    crate::epoched_new::EpochedDelta::open(key)
 }
 
 /// new init genesis
@@ -1725,17 +1746,26 @@ pub fn init_genesis_NEW<S>(
     current_epoch: namada_core::types::storage::Epoch,
 ) -> storage_api::Result<()>
 where
-    S: for<'iter> StorageRead<'iter> + StorageWrite,
+    S: for<'iter> StorageRead<'iter> + StorageWrite + PosBase,
 {
-    // validator_sets_handle().init_at_genesis(storage, value, current_epoch)
+    let mut active: BTreeSet<WeightedValidator> = BTreeSet::default();
+    let mut total_bonded = token::Amount::default();
+
     for GenesisValidator {
         address,
         tokens,
         consensus_key,
         commission_rate,
-        max_commission_rate_change
+        max_commission_rate_change,
     } in validators
     {
+        storage.write_validator_address_raw_hash(&address, &consensus_key);
+        storage.write_validator_max_commission_rate_change(
+            &address,
+            &max_commission_rate_change,
+        );
+        total_bonded += tokens;
+
         validator_consensus_key_handle(&address).init_at_genesis(
             storage,
             consensus_key,
@@ -1744,15 +1774,64 @@ where
         validator_state_handle(&address).init_at_genesis(
             storage,
             ValidatorState::Candidate,
-            current_epoch
+            current_epoch,
         )?;
         let delta = token::Change::from(tokens);
         validator_deltas_handle(&address).init_at_genesis(
             storage,
             delta,
-            current_epoch
+            current_epoch,
         )?;
+        // Do we want source to be address or None?
+        bond_handle(&address, &address, false).init_at_genesis(
+            storage,
+            delta,
+            current_epoch,
+        )?;
+        bond_handle(&address, &address, true).init_at_genesis(
+            storage,
+            delta,
+            current_epoch,
+        )?;
+        validator_commission_rate_handle(&address).init_at_genesis(
+            storage,
+            commission_rate,
+            current_epoch,
+        )?;
+
+        active.insert(WeightedValidator {
+            bonded_stake: tokens.into(),
+            address: address.clone(),
+        });
     }
+    // Pop the smallest validators from the active set until its size is under
+    // the limit and insert them into the inactive set
+    let mut inactive: BTreeSet<WeightedValidator> = BTreeSet::default();
+    while active.len() > params.max_validator_slots as usize {
+        match active.pop_first_shim() {
+            Some(first) => {
+                inactive.insert(first);
+            }
+            None => break,
+        }
+    }
+    let validator_set = ValidatorSet { active, inactive };
+    validator_sets_handle().init_at_genesis(
+        storage,
+        validator_set,
+        current_epoch,
+    )?;
+
+    total_deltas_handle().init_at_genesis(
+        storage,
+        token::Change::from(total_bonded),
+        current_epoch,
+    );
+    storage.credit_tokens(
+        &storage.staking_token_address(),
+        &PosBase::POS_ADDRESS,
+        total_bonded,
+    );
 
     Ok(())
 }
@@ -1817,7 +1896,7 @@ where
 
 /// Write PoS validator's consensus key (used for signing block votes).
 /// Note: for EpochedDelta, write the value to change storage by
-pub fn write_validator_deltas<S>(
+pub fn update_validator_deltas<S>(
     storage: &mut S,
     params: &PosParams,
     validator: &Address,
@@ -1829,11 +1908,10 @@ where
 {
     let handle = validator_deltas_handle(&validator);
     let offset = OffsetPipelineLen::value(params);
-
-    // TODO: either use read_validator_deltas here to update the value properly
-    // or use a new or updated method to update the Data val for EpochedDelta (set currently just sets the val like discrete Epoched)
-    handle.set(storage, delta, current_epoch, offset)
+    let val = handle.get_delta_val(storage, current_epoch, params)?.unwrap_or_default();
+    handle.set(storage, val + delta, current_epoch, offset)
 }
+
 /// Read PoS validator's state.
 pub fn read_validator_state<S>(
     storage: &S,
@@ -1870,28 +1948,223 @@ pub fn read_bonds<S>(
     params: &PosParams,
     source: &Address,
     validator: &Address,
-    epoch: namada_core::types::storage::Epoch,
-) -> storage_api::Result<Option<LazyMap<(Epoch, Epoch), token::Amount>>>
+    // epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<Bond_NEW>>
 where
     S: for<'iter> StorageRead<'iter>,
 {
-    // What exactly should we have this read? Should we look up by source, validator?
-    // Should it be the sum of all bonds?
-    todo!()
+    // What do we actually want to be read here? Do we want epoch to be an input
+    // arg? This seems like a fine option for now.
+    // Could build and return a LazyMap<Epoch, Amount> for all the bonds that
+    // exist at the input epoch, where `Epoch` inside LazyMap would be the
+    // ending epoch of the bond
+    Ok(Some(bond_handle(source, validator)))
 }
 
 /// Write PoS validator's consensus key (used for signing block votes).
 pub fn write_bond<S>(
     storage: &mut S,
     params: &PosParams,
+    source: &Address,
     validator: &Address,
-    state: ValidatorState,
+    amount: token::Amount,
     current_epoch: namada_core::types::storage::Epoch,
 ) -> storage_api::Result<()>
 where
     S: for<'iter> StorageRead<'iter> + StorageWrite,
 {
-    let handle = validator_state_handle(&validator);
+    let handle = bond_handle(source, validator);
     let offset = OffsetPipelineLen::value(params);
-    handle.set(storage, state, current_epoch, offset)
+    let map_key: (Epoch, Option<Epoch>) = (current_epoch + offset, None);
+    // Do some better error handling here
+    match handle.insert(storage, map_key, amount)? {
+        Some(_) => Ok(()),
+        None => Ok(()),
+    }
+}
+
+/// Read PoS validator's commission rate.
+pub fn read_validator_commission_rate<S>(
+    storage: &S,
+    params: &PosParams,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<Decimal>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = validator_commission_rate_handle(validator);
+    handle.get(storage, epoch, params)
+}
+
+/// Write PoS validator's commission rate.
+pub fn write_validator_commission_rate<S>(
+    storage: &mut S,
+    params: &PosParams,
+    validator: &Address,
+    rate: Decimal,
+    current_epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let handle = validator_commission_rate_handle(&validator);
+    let offset = OffsetPipelineLen::value(params);
+    handle.set(storage, rate, current_epoch, offset)
+
+    // Do I want to do any checking for valid rate changes here (prob not)?
+}
+
+/// Read PoS validator's max commission rate change.
+pub fn read_validator_commission_rate<S>(
+    storage: &S,
+    validator: &Address,
+) -> storage_api::Result<Option<Decimal>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let key = validator_max_commission_rate_change_key(validator);
+    storage.read(&key)
+}
+
+pub fn write_validator_max_commission_rate_change<S>(
+    storage: &S,
+    validator: &Address,
+    change: Decimal,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let key = validator_max_commission_rate_change_key(validator);
+    storage.write(&key, change)
+}
+
+/// Read PoS total stake (sum of deltas).
+pub fn read_total_stake<S>(
+    storage: &S,
+    params: &PosParams,
+    validator: &Address,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<Option<token::Change>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = total_deltas_handle();
+    handle.get_sum(storage, epoch, params)
+}
+
+/// Write PoS total deltas.
+/// Note: for EpochedDelta, write the value to change storage by
+pub fn update_total_deltas<S>(
+    storage: &mut S,
+    params: &PosParams,
+    delta: token::Change,
+    current_epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let handle = total_deltas_handle();
+    let offset = OffsetPipelineLen::value(params);
+    let val = handle
+        .get_delta_val(storage, current_epoch, params)?
+        .unwrap();
+    handle.set(storage, val + delta, current_epoch, offset)
+}
+
+/// NEW: Self-bond tokens to a validator when `source` is `None` or equal to
+/// the `validator` address, or delegate tokens from the `source` to the
+/// `validator`.
+fn bond_tokens_new<S>(
+    storage: &mut S,
+    source: Option<&Address>,
+    validator: &Address,
+    amount: token::Amount,
+    current_epoch: Epoch,
+) -> storage_api::Result<()>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite + PosReadOnly,
+{
+    if let Some(source) = source {
+        if source != validator && self.is_validator(source)? {
+            return Err(
+                BondError::SourceMustNotBeAValidator(source.clone()).into()
+            );
+        }
+    }
+    if !storage.has_key(&validator_state_key(validator)) {
+        return Err(BondError::NotAValidator(address)).into();
+    }
+
+    let params = storage.read_pos_params()?;
+    let validator_state_handle = validator_state_handle(validator);
+    let source = source.unwrap_or(validator);
+    let bond_amount_handle = bond_handle(source, validator, false);
+    let bond_remain_handle = bond_handle(source, validator, true);
+    let validator_deltas_handle = validator_deltas_handle(validator);
+    let total_deltas_handle = total_deltas_handle();
+    let validator_set_handle = validator_sets_handle();
+
+    // Check that validator is not inactive at anywhere between the current
+    // epoch and pipeline offset
+    for epoch in current_epoch.iter_range(params.pipeline_len) {
+        if let Some(ValidatorState::Inactive) =
+            validator_state_handle.get(storage, epoch, &params)
+        {
+            return Err(BondError::InactiveValidator(validator));
+        }
+    }
+
+    // Initialize or update the bond at the pipeline offset
+    let bond_id = BondId { source, validator };
+    if storage.has_key(&storage::bond_key(&bond_id))? {
+        let cur_amount = bond_amount_handle
+            .get_delta_val(storage, current_epoch, &params)?
+            .unwrap_or_default();
+        let cur_remain = bond_remain_handle
+            .get_delta_val(storage, current_epoch, &params)?
+            .unwrap_or_default();
+        bond_amount_handle.set(
+            storage,
+            cur_amount + amount,
+            current_epoch,
+            offset,
+        )?;
+        bond_remain_handle.set(
+            storage,
+            cur_remain + amount,
+            current_epoch,
+            offset,
+        )?;
+    } else {
+        bond_amount_handle.init(
+            storage,
+            amount,
+            current_epoch,
+            params.pipeline_len,
+        )?;
+        bond_remain_handle.init(
+            storage,
+            amount,
+            current_epoch,
+            params.pipeline_len,
+        )?;
+    }
+
+    // Update the validator set
+    // TODO: are we going to store a BTreeSet or have some lazy stuff for this too?
+
+
+    // Update the validator and total deltas
+    update_validator_deltas(storage, &params, validator, delta, current_epoch)?;
+    update_total_deltas(storage, &params, amount, current_epoch)?;
+
+    // Transfer the bonded tokens from the source to PoS
+    self.transfer(
+        &self.staking_token_address(),
+        amount,
+        source,
+        &PosReadOnly::POS_ADDRESS,
+    )?;
+    Ok(())
 }

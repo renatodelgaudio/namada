@@ -2,6 +2,9 @@
 
 pub mod vp;
 
+pub use namada_core::ledger::storage_api;
+pub use namada_core::types::key::common;
+pub use namada_core::types::token;
 pub use namada_proof_of_stake;
 pub use namada_proof_of_stake::parameters::PosParams;
 pub use namada_proof_of_stake::storage::*;
@@ -13,11 +16,6 @@ pub use vp::PosVP;
 use crate::ledger::storage::{self as ledger_storage, Storage, StorageHasher};
 use crate::types::address::{Address, InternalAddress};
 use crate::types::storage::Epoch;
-
-pub use namada_core::types::key::common;
-pub use namada_core::types::token;
-pub use namada_core::ledger::storage_api;
-
 
 /// Address of the PoS account implemented as a native VP
 pub const ADDRESS: Address = Address::Internal(InternalAddress::PoS);
@@ -70,14 +68,12 @@ pub fn init_genesis_storage_NEW<DB, H>(
     .expect("Initialize PoS genesis storage");
 }
 
-
 /// Alias for a PoS type with the same name with concrete type parameters
 pub type ValidatorConsensusKeys =
     namada_proof_of_stake::types::ValidatorConsensusKeys;
 
 /// Alias for a PoS type with the same name with concrete type parameters
-pub type ValidatorDeltas =
-    namada_proof_of_stake::types::ValidatorDeltas;
+pub type ValidatorDeltas = namada_proof_of_stake::types::ValidatorDeltas;
 
 /// Alias for a PoS type with the same name with concrete type parameters
 pub type Bonds = namada_proof_of_stake::types::Bonds;

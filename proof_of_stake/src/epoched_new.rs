@@ -219,7 +219,11 @@ impl<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64>
     EpochedDelta<Data, FutureEpochs, NUM_PAST_EPOCHS>
 where
     FutureEpochs: EpochOffset,
-    Data: BorshSerialize + BorshDeserialize + ops::Add<Output = Data> + 'static + Debug,
+    Data: BorshSerialize
+        + BorshDeserialize
+        + ops::Add<Output = Data>
+        + 'static
+        + Debug,
 {
     /// Open the handle
     pub fn open(key: storage::Key) -> Self {
@@ -315,7 +319,8 @@ where
             None => return Ok(None),
             Some(last_update) => {
                 let data_handler = self.get_data_handler();
-                let future_most_epoch = last_update + FutureEpochs::value(params);
+                let future_most_epoch =
+                    last_update + FutureEpochs::value(params);
                 // Epoch can be a lot greater than the epoch where
                 // a value is recorded, we check the upper bound
                 // epoch of the LazyMap data
@@ -325,7 +330,7 @@ where
                     match (&mut sum, next) {
                         (Some(_), Ok((next_epoch, next_val))) => {
                             if next_epoch > epoch {
-                                return Ok(sum)
+                                return Ok(sum);
                             } else {
                                 sum = sum.map(|cur_sum| cur_sum + next_val)
                             }
@@ -337,9 +342,7 @@ where
                                 sum = Some(next_val)
                             }
                         }
-                        (Some(_), Err(_)) => {
-                            return Ok(sum)
-                        }
+                        (Some(_), Err(_)) => return Ok(sum),
                         // perhaps elaborate with an error
                         _ => return Ok(None),
                     };
@@ -383,9 +386,10 @@ where
 
     /// TODO: maybe better description
     /// Update the data associated with epochs, if needed. Any key-value with
-    /// epoch before the oldest stored epoch is added to the key-value with the oldest stored epoch that is kept. If the oldest
-    /// stored epoch is not already associated with some value, the latest
-    /// value from the dropped values, if any, is associated with it.
+    /// epoch before the oldest stored epoch is added to the key-value with the
+    /// oldest stored epoch that is kept. If the oldest stored epoch is not
+    /// already associated with some value, the latest value from the
+    /// dropped values, if any, is associated with it.
     fn update_data<S>(
         &self,
         storage: &mut S,
@@ -404,18 +408,25 @@ where
                 let data_handler = self.get_data_handler();
                 let mut new_oldest_value: Option<Data> = None;
                 for offset in 1..diff + 1 {
-                    let old = data_handler
-                        .remove(storage, &Epoch(expected_oldest_epoch.0 - offset))?;
+                    let old = data_handler.remove(
+                        storage,
+                        &Epoch(expected_oldest_epoch.0 - offset),
+                    )?;
                     if old.is_some() {
                         match new_oldest_value {
-                            Some(latest) => new_oldest_value = Some(latest + old.unwrap()),
+                            Some(latest) => {
+                                new_oldest_value = Some(latest + old.unwrap())
+                            }
                             None => new_oldest_value = old,
                         }
                     }
                 }
                 if let Some(new_oldest_value) = new_oldest_value {
                     // TODO we can add `contains_key` to LazyMap
-                    if data_handler.get(storage, &expected_oldest_epoch)?.is_none() {
+                    if data_handler
+                        .get(storage, &expected_oldest_epoch)?
+                        .is_none()
+                    {
                         data_handler.insert(
                             storage,
                             expected_oldest_epoch,

@@ -12,8 +12,8 @@ use bit_vec::BitVec;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use data_encoding::BASE32HEX_NOPAD;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use regex::Regex;
 
 use crate::bytes::ByteBuf;
 use crate::types::address::{self, Address};
@@ -882,24 +882,36 @@ impl_int_key_seg!(u32, i32, 4);
 impl_int_key_seg!(u64, i64, 8);
 impl_int_key_seg!(u128, i128, 16);
 
-impl KeySeg for (Epoch, Epoch) {
+impl KeySeg for (Epoch, Option<Epoch>) {
     fn parse(string: String) -> Result<Self>
     where
         Self: Sized,
     {
-        let re = Regex::new(r"\((\d{1}),(\d{1})\)").unwrap();
+        let re = Regex::new(r"\((\d{1}),(-?)(\d?)\)").unwrap();
         let caps = re.captures(string.as_str()).unwrap();
         let first = caps.get(1).map(|m| m.as_str().to_owned()).unwrap();
-        let second = caps.get(2).map(|m| m.as_str().to_owned()).unwrap();
-        
-        let first = u64::parse(first)?;
-        let second = u64::parse(second)?;
+        let second = caps.get(2).map_or(None, |m| Some(m.as_str().to_owned()));
+        let third = caps.get(3).map_or(None, |m| Some(m.as_str().to_owned()));
 
-        Ok((Epoch(first), Epoch(second)))
+        let first = u64::parse(first)?;
+        match second {
+            Some(epoch_str) => {
+                let third = u64::parse(epoch_str)?;
+                Ok((Epoch(first), Some(Epoch(third))))
+            }
+            None => Ok((Epoch(first), None)),
+        }
     }
 
     fn raw(&self) -> String {
-        format!("({},{})",self.0,self.1)
+        match self.1 {
+            Some(epoch) => {
+                format!("({},{})", self.0, epoch)
+            }
+            None => {
+                format!("({},-)", self.0)
+            }
+        }
     }
 
     fn to_db_key(&self) -> DbKeySeg {
