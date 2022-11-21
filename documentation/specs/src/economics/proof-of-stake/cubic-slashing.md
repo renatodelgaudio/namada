@@ -65,11 +65,10 @@ struct Validator {
     voting_power: u64,
 }
 
-// Generic slash object with the misbehaving validator, infraction type, and some unique identifier
+// Generic slash object with the misbehaving validator and infraction type
 struct Slash {
     validator: Validator,
     infraction_type: Infraction,
-    id: u64,
 }
 
 // Calculate a vector of final slash rates for each slash in the current epoch
@@ -84,14 +83,12 @@ fn calculate_slash_rates(
     let slashes_next_epoch = slashes.get(current_epoch + 1);
 
     let associated_slashes = slashes_prev_epoch.extend(slashes_this_epoch).extend(slashes_next_epoch);
-    let final_rates: Vec<f64>;
+    let vp_frac_sum = associated_slashes.iter.fold(0, |sum, Slash{validator, _}|
+            { sum + *validator.voting_power / total_voting_power}
+    );
 
+    let final_rates: Vec<f64>;
     for slash in &slashes_this_epoch {
-        let vp_frac_sum: f64 = 0;
-        for assoc_slash in &associated_slashes {
-            if assoc_slash.id == slash.id { continue; }
-            vp_frac_sum += assoc_slash.validator.voting_power / total_voting_power;
-        }
         let rate = max( slash.infraction_type.0 , 9 * vp_frac_sum * vp_frac_sum );
         final_rates.push(rate)
     }
@@ -99,7 +96,7 @@ fn calculate_slash_rates(
 }
 ```
 
-As a function, it can be drawn as:
+As a function, it can be drawn as (assuming $r_{\text{min}} = 1\%$):
 
 [<img src="../images/cubic_slash.png" width="500"/>](../images/cubic_slash.png)
 
