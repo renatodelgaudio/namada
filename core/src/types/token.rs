@@ -91,8 +91,8 @@ impl serde::Serialize for Amount {
     where
         S: serde::Serializer,
     {
-        let amount_string = self.to_string();
-        serde::Serialize::serialize(&amount_string, serializer)
+        let amount_dec: Decimal = self.into();
+        serde::Serialize::serialize(&amount_dec, serializer)
     }
 }
 
@@ -101,10 +101,9 @@ impl<'de> serde::Deserialize<'de> for Amount {
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::Error;
-        let amount_string: String =
+        let amount_dec: Decimal =
             serde::Deserialize::deserialize(deserializer)?;
-        Self::from_str(&amount_string).map_err(D::Error::custom)
+        Ok(Self::from(&amount_dec))
     }
 }
 
@@ -114,8 +113,21 @@ impl From<Amount> for Decimal {
     }
 }
 
+impl From<&Amount> for Decimal {
+    fn from(amount: &Amount) -> Self {
+        Into::<Decimal>::into(amount.micro) / Into::<Decimal>::into(SCALE)
+    }
+}
+
 impl From<Decimal> for Amount {
     fn from(micro: Decimal) -> Self {
+        let res = (micro * Into::<Decimal>::into(SCALE)).to_u64().unwrap();
+        Self { micro: res }
+    }
+}
+
+impl From<&Decimal> for Amount {
+    fn from(micro: &Decimal) -> Self {
         let res = (micro * Into::<Decimal>::into(SCALE)).to_u64().unwrap();
         Self { micro: res }
     }
