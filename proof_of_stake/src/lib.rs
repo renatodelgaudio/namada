@@ -28,7 +28,6 @@ use std::num::TryFromIntError;
 use epoched::{
     DynEpochOffset, EpochOffset, Epoched, EpochedDelta, OffsetPipelineLen,
 };
-use namada_core::ledger::storage_api::collections::{LazyCollection, LazyMap};
 use namada_core::ledger::storage_api::{self, StorageRead, StorageWrite};
 use namada_core::types::address::{self, Address, InternalAddress};
 use namada_core::types::key::common;
@@ -39,7 +38,7 @@ use rust_decimal::Decimal;
 use storage::{validator_max_commission_rate_change_key, validator_state_key};
 use thiserror::Error;
 use types::{
-    ActiveValidator, Bond_NEW, Bonds, Bonds_NEW, CommissionRates,
+    ActiveValidator, Bonds, Bonds_NEW, CommissionRates,
     CommissionRates_NEW, GenesisValidator, Slash, SlashType, Slashes,
     TotalDeltas, TotalDeltas_NEW, Unbond, Unbonds, ValidatorConsensusKeys,
     ValidatorConsensusKeys_NEW, ValidatorDeltas, ValidatorDeltas_NEW,
@@ -1798,7 +1797,6 @@ where
             commission_rate,
             current_epoch,
         )?;
-
         active.insert(WeightedValidator {
             bonded_stake: tokens.into(),
             address: address.clone(),
@@ -1826,10 +1824,10 @@ where
         storage,
         token::Change::from(total_bonded),
         current_epoch,
-    );
+    )?;
     storage.credit_tokens(
         &storage.staking_token_address(),
-        &PosBase::POS_ADDRESS,
+        &<S as PosBase>::POS_ADDRESS,
         total_bonded,
     );
 
@@ -1942,47 +1940,6 @@ where
     handle.set(storage, state, current_epoch, offset)
 }
 
-/// Read PoS validator's bonds
-pub fn read_bonds<S>(
-    storage: &S,
-    params: &PosParams,
-    source: &Address,
-    validator: &Address,
-    // epoch: namada_core::types::storage::Epoch,
-) -> storage_api::Result<Option<Bond_NEW>>
-where
-    S: for<'iter> StorageRead<'iter>,
-{
-    // What do we actually want to be read here? Do we want epoch to be an input
-    // arg? This seems like a fine option for now.
-    // Could build and return a LazyMap<Epoch, Amount> for all the bonds that
-    // exist at the input epoch, where `Epoch` inside LazyMap would be the
-    // ending epoch of the bond
-    Ok(Some(bond_handle(source, validator)))
-}
-
-/// Write PoS validator's consensus key (used for signing block votes).
-pub fn write_bond<S>(
-    storage: &mut S,
-    params: &PosParams,
-    source: &Address,
-    validator: &Address,
-    amount: token::Amount,
-    current_epoch: namada_core::types::storage::Epoch,
-) -> storage_api::Result<()>
-where
-    S: for<'iter> StorageRead<'iter> + StorageWrite,
-{
-    let handle = bond_handle(source, validator);
-    let offset = OffsetPipelineLen::value(params);
-    let map_key: (Epoch, Option<Epoch>) = (current_epoch + offset, None);
-    // Do some better error handling here
-    match handle.insert(storage, map_key, amount)? {
-        Some(_) => Ok(()),
-        None => Ok(()),
-    }
-}
-
 /// Read PoS validator's commission rate.
 pub fn read_validator_commission_rate<S>(
     storage: &S,
@@ -2016,7 +1973,7 @@ where
 }
 
 /// Read PoS validator's max commission rate change.
-pub fn read_validator_commission_rate<S>(
+pub fn read_validator_max_commission_rate_change<S>(
     storage: &S,
     validator: &Address,
 ) -> storage_api::Result<Option<Decimal>>
@@ -2027,8 +1984,9 @@ where
     storage.read(&key)
 }
 
+/// Write PoS validator's max commission rate change.
 pub fn write_validator_max_commission_rate_change<S>(
-    storage: &S,
+    storage: &mut S,
     validator: &Address,
     change: Decimal,
 ) -> storage_api::Result<()>
@@ -2043,7 +2001,6 @@ where
 pub fn read_total_stake<S>(
     storage: &S,
     params: &PosParams,
-    validator: &Address,
     epoch: namada_core::types::storage::Epoch,
 ) -> storage_api::Result<Option<token::Change>>
 where
@@ -2072,10 +2029,24 @@ where
     handle.set(storage, val + delta, current_epoch, offset)
 }
 
+/// Check if the provided address is a validator address
+pub fn is_validator<S>(
+    storage: &mut S,
+    address: &Address,
+    params: &PosParams,
+    epoch: namada_core::types::storage::Epoch,
+) -> storage_api::Result<bool>
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let state = read_validator_state(storage, params, address, epoch)?;
+    Ok(state.is_some())
+}
+
 /// NEW: Self-bond tokens to a validator when `source` is `None` or equal to
 /// the `validator` address, or delegate tokens from the `source` to the
 /// `validator`.
-fn bond_tokens_new<S>(
+pub fn bond_tokens_new<S>(
     storage: &mut S,
     source: Option<&Address>,
     validator: &Address,
@@ -2083,40 +2054,41 @@ fn bond_tokens_new<S>(
     current_epoch: Epoch,
 ) -> storage_api::Result<()>
 where
-    S: for<'iter> StorageRead<'iter> + StorageWrite + PosReadOnly,
+    S: for<'iter> StorageRead<'iter> + StorageWrite + PosBase,
 {
+    let params = storage.read_pos_params();
     if let Some(source) = source {
-        if source != validator && self.is_validator(source)? {
+        if source != validator && is_validator(storage, source, &params, current_epoch)? {
             return Err(
                 BondError::SourceMustNotBeAValidator(source.clone()).into()
             );
         }
     }
-    if !storage.has_key(&validator_state_key(validator)) {
-        return Err(BondError::NotAValidator(address)).into();
+    if !storage.has_key(&validator_state_key(validator))? {
+        return Err(BondError::NotAValidator(validator.clone()).into());
     }
 
-    let params = storage.read_pos_params()?;
     let validator_state_handle = validator_state_handle(validator);
     let source = source.unwrap_or(validator);
     let bond_amount_handle = bond_handle(source, validator, false);
     let bond_remain_handle = bond_handle(source, validator, true);
-    let validator_deltas_handle = validator_deltas_handle(validator);
-    let total_deltas_handle = total_deltas_handle();
-    let validator_set_handle = validator_sets_handle();
+    // let validator_deltas_handle = validator_deltas_handle(validator);
+    // let total_deltas_handle = total_deltas_handle();
+    // let validator_set_handle = validator_sets_handle();
 
     // Check that validator is not inactive at anywhere between the current
     // epoch and pipeline offset
     for epoch in current_epoch.iter_range(params.pipeline_len) {
         if let Some(ValidatorState::Inactive) =
-            validator_state_handle.get(storage, epoch, &params)
+            validator_state_handle.get(storage, epoch, &params)?
         {
-            return Err(BondError::InactiveValidator(validator));
+            return Err(BondError::InactiveValidator(validator.clone()).into());
         }
     }
 
     // Initialize or update the bond at the pipeline offset
-    let bond_id = BondId { source, validator };
+    let bond_id = BondId { source: source.clone(), validator: validator.clone() };
+    let offset = params.pipeline_len;
     if storage.has_key(&storage::bond_key(&bond_id))? {
         let cur_amount = bond_amount_handle
             .get_delta_val(storage, current_epoch, &params)?
@@ -2126,45 +2098,131 @@ where
             .unwrap_or_default();
         bond_amount_handle.set(
             storage,
-            cur_amount + amount,
+            cur_amount + token::Change::from(amount),
             current_epoch,
             offset,
         )?;
         bond_remain_handle.set(
             storage,
-            cur_remain + amount,
+            cur_remain + token::Change::from(amount),
             current_epoch,
             offset,
         )?;
     } else {
         bond_amount_handle.init(
             storage,
-            amount,
+            token::Change::from(amount),
             current_epoch,
-            params.pipeline_len,
+            offset,
         )?;
         bond_remain_handle.init(
             storage,
-            amount,
+            token::Change::from(amount),
             current_epoch,
-            params.pipeline_len,
+            offset,
         )?;
     }
 
     // Update the validator set
-    // TODO: are we going to store a BTreeSet or have some lazy stuff for this too?
-
+    update_validator_set(params, validator, token_change, change_offset, validator_set, validator_deltas, current_epoch)
 
     // Update the validator and total deltas
-    update_validator_deltas(storage, &params, validator, delta, current_epoch)?;
-    update_total_deltas(storage, &params, amount, current_epoch)?;
+    update_validator_deltas(storage, &params, validator, token::Change::from(amount), current_epoch)?;
+    update_total_deltas(storage, &params, token::Change::from(amount), current_epoch)?;
 
     // Transfer the bonded tokens from the source to PoS
-    self.transfer(
-        &self.staking_token_address(),
+    storage.transfer(
+        &staking_token_address(),
         amount,
         source,
-        &PosReadOnly::POS_ADDRESS,
-    )?;
+        &<S as PosBase>::POS_ADDRESS,
+    );
     Ok(())
+}
+
+/// NEW: Update validator set when a validator's receives a new bond and when its
+/// bond is unbonded (self-bond or delegation).
+fn update_validator_set_new(
+    params: &PosParams,
+    validator: &Address,
+    token_change: token::Change,
+    change_offset: DynEpochOffset,
+    active_validator_set: &mut ValidatorSetNEW,
+    inactive_validator_set: &mut ValidatorSetNEW,
+    validator_deltas: &ValidatorDeltas_NEW,
+    current_epoch: Epoch,
+) {
+    // validator_set.update_from_offset(
+    //     |validator_set, epoch| {
+    //         // Find the validator's bonded stake at the epoch that's being
+    //         // updated from its total deltas
+    //         let tokens_pre = validator_deltas
+    //             .and_then(|d| d.get(epoch))
+    //             .unwrap_or_default();
+    //         let tokens_post = tokens_pre + token_change;
+    //         let tokens_pre: i128 = tokens_pre;
+    //         let tokens_post: i128 = tokens_post;
+    //         let tokens_pre: u64 = TryFrom::try_from(tokens_pre).unwrap();
+    //         let tokens_post: u64 = TryFrom::try_from(tokens_post).unwrap();
+
+    //         if tokens_pre != tokens_post {
+    //             let validator_pre = WeightedValidator {
+    //                 bonded_stake: tokens_pre,
+    //                 address: validator.clone(),
+    //             };
+    //             let validator_post = WeightedValidator {
+    //                 bonded_stake: tokens_post,
+    //                 address: validator.clone(),
+    //             };
+
+    //             if validator_set.inactive.contains(&validator_pre) {
+    //                 let min_active_validator =
+    //                     validator_set.active.first_shim();
+    //                 let min_bonded_stake = min_active_validator
+    //                     .map(|v| v.bonded_stake)
+    //                     .unwrap_or_default();
+    //                 if tokens_post > min_bonded_stake {
+    //                     let deactivate_min =
+    //                         validator_set.active.pop_first_shim();
+    //                     let popped =
+    //                         validator_set.inactive.remove(&validator_pre);
+    //                     debug_assert!(popped);
+    //                     validator_set.active.insert(validator_post);
+    //                     if let Some(deactivate_min) = deactivate_min {
+    //                         validator_set.inactive.insert(deactivate_min);
+    //                     }
+    //                 } else {
+    //                     validator_set.inactive.remove(&validator_pre);
+    //                     validator_set.inactive.insert(validator_post);
+    //                 }
+    //             } else {
+    //                 debug_assert!(
+    //                     validator_set.active.contains(&validator_pre)
+    //                 );
+    //                 let max_inactive_validator =
+    //                     validator_set.inactive.last_shim();
+    //                 let max_bonded_stake = max_inactive_validator
+    //                     .map(|v| v.bonded_stake)
+    //                     .unwrap_or_default();
+    //                 if tokens_post < max_bonded_stake {
+    //                     let activate_max =
+    //                         validator_set.inactive.pop_last_shim();
+    //                     let popped =
+    //                         validator_set.active.remove(&validator_pre);
+    //                     debug_assert!(popped);
+    //                     validator_set.inactive.insert(validator_post);
+    //                     if let Some(activate_max) = activate_max {
+    //                         validator_set.active.insert(activate_max);
+    //                     }
+    //                 } else {
+    //                     validator_set.active.remove(&validator_pre);
+    //                     validator_set.active.insert(validator_post);
+    //                 }
+    //             }
+    //         }
+    //     },
+    //     current_epoch,
+    //     change_offset,
+    //     params,
+    // )
 }

@@ -8,8 +8,7 @@ use std::hash::Hash;
 use std::ops::Add;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use namada_core::ledger::storage_api::collections::lazy_map::LazyMap;
-use namada_core::ledger::storage_api::collections::LazyCollection;
+use namada_core::ledger::storage_api::collections::LazyMap;
 use namada_core::types::address::Address;
 use namada_core::types::key::common;
 use namada_core::types::storage::Epoch;
@@ -35,11 +34,18 @@ pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
     0,
 >;
 
-/// Epoched validator sets.
-pub type ValidatorSets_NEW = crate::epoched_new::Epoched<
-    ValidatorSet,
+/// Epoched active validator sets.
+pub type ActiveValidatorSets_NEW = crate::epoched_new::Epoched<
+    ValidatorSetNew,
     crate::epoched_new::OffsetPipelineLen,
-    0,
+    2,
+>;
+
+/// Epoched inactive validator sets.
+pub type InactiveValidatorSets_NEW = crate::epoched_new::Epoched<
+    ValidatorSetNew,
+    crate::epoched_new::OffsetPipelineLen,
+    2,
 >;
 
 /// Epoched validator's deltas.
@@ -67,7 +73,7 @@ pub type CommissionRates_NEW = crate::epoched_new::Epoched<
 
 /// Epoched validator's bonds
 pub type Bonds_NEW = crate::epoched_new::EpochedDelta<
-    Decimal,
+    token::Change,
     crate::epoched_new::OffsetPipelineLen,
     21,
 >;
@@ -205,6 +211,9 @@ pub struct ValidatorSet {
     pub inactive: BTreeSet<WeightedValidator>,
 }
 
+// New Validator set construction
+pub type ValidatorSetNew = LazyMap<u64, Address>;
+
 /// Validator's state.
 #[derive(
     Debug,
@@ -247,7 +256,7 @@ pub struct Bond {
     pub neg_deltas: token::Amount,
 }
 
-pub type Bond_NEW = LazyMap<(Epoch, Option<Epoch>), token::Amount>;
+// pub type Bond_NEW = LazyMap<(Epoch, Option<Epoch>), token::Amount>;
 
 /// An unbond contains unbonded tokens from a validator's self-bond or a
 /// delegation from a regular account to a validator.

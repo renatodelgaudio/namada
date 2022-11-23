@@ -261,7 +261,7 @@ pub fn bond_key(bond_id: &BondId) -> Key {
 /// (source and validator)
 pub fn bond_amount_key(bond_id: &BondId) -> Key {
     bond_key(bond_id)
-        .push(&BOND_AMOUNT_STORAGE_KEY)
+        .push(&BOND_AMOUNT_STORAGE_KEY.to_owned())
         .expect("Cannot obtain storage key")
 }
 
@@ -269,7 +269,7 @@ pub fn bond_amount_key(bond_id: &BondId) -> Key {
 /// validator)
 pub fn bond_remaining_key(bond_id: &BondId) -> Key {
     bond_key(bond_id)
-        .push(&BOND_REMAINING_STORAGE_KEY)
+        .push(&BOND_REMAINING_STORAGE_KEY.to_owned())
         .expect("Cannot obtain storage key")
 }
 
