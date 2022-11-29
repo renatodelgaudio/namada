@@ -21,34 +21,40 @@ use crate::epoched::{
 };
 use crate::parameters::PosParams;
 
+// TODO: add this to the spec
+/// Stored positions of validators in active and inactive validator sets
+pub type ValidatorSetPositions_NEW = crate::epoched_new::NestedEpoched<
+    LazyMap<Address, Position>,
+    crate::epoched_new::OffsetPipelineLen,
+>;
+
 /// Epoched validator's consensus key.
 pub type ValidatorConsensusKeys_NEW = crate::epoched_new::Epoched<
     common::PublicKey,
     crate::epoched_new::OffsetPipelineLen,
-    0,
 >;
 
 /// Epoched validator's state.
 pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
     ValidatorState,
     crate::epoched_new::OffsetPipelineLen,
-    0,
 >;
 
 pub type ValidatorSets_NEW = NestedMap<token::Amount, ValidatorSetNew>;
+
+// New Validator set construction
+pub type ValidatorSetNew = LazyMap<Position, Address>;
 
 /// Epoched active validator sets.
 pub type ActiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
     ValidatorSets_NEW,
     crate::epoched_new::OffsetPipelineLen,
-    2,
 >;
 
 /// Epoched inactive validator sets.
 pub type InactiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
     ValidatorSets_NEW,
     crate::epoched_new::OffsetPipelineLen,
-    2,
 >;
 
 /// Epoched validator's deltas.
@@ -67,11 +73,13 @@ pub type TotalDeltas_NEW = crate::epoched_new::EpochedDelta<
     21,
 >;
 
+const u64_max: u64 = u64::MAX;
+
 /// Epoched validator commission rate
 pub type CommissionRates_NEW = crate::epoched_new::Epoched<
     Decimal,
     crate::epoched_new::OffsetPipelineLen,
-    2,
+    u64_max,
 >;
 
 /// Epoched validator's bonds
@@ -219,7 +227,9 @@ pub struct ValidatorSet {
     PartialOrd,
     Ord,
     Debug,
+    Default,
     Eq,
+    Hash,
     Clone,
     Copy,
     BorshDeserialize,
@@ -251,9 +261,6 @@ impl Position {
         Self(self.0.wrapping_add(1))
     }
 }
-
-// New Validator set construction
-pub type ValidatorSetNew = LazyMap<Position, Address>;
 
 /// Validator's state.
 #[derive(

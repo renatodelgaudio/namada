@@ -20,7 +20,7 @@ use crate::parameters::PosParams;
 pub struct Epoched<
     Data,
     FutureEpochs,
-    const NUM_PAST_EPOCHS: u64,
+    const NUM_PAST_EPOCHS: u64 = 0,
     SON = collections::Simple,
 > {
     storage_prefix: storage::Key,
@@ -30,7 +30,7 @@ pub struct Epoched<
 }
 
 // Discrete epoched data handle with nested lazy structure
-pub type NestedEpoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64> =
+pub type NestedEpoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64 = 0> =
     Epoched<Data, FutureEpochs, NUM_PAST_EPOCHS, collections::Nested>;
 
 /// Delta epoched data handle

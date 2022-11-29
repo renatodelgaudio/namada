@@ -28,7 +28,9 @@ use std::num::TryFromIntError;
 use epoched::{
     DynEpochOffset, EpochOffset, Epoched, EpochedDelta, OffsetPipelineLen,
 };
-use namada_core::ledger::storage_api::{self, StorageRead, StorageWrite};
+use namada_core::ledger::storage_api::{
+    self, OptionExt, ResultExt, StorageRead, StorageWrite,
+};
 use namada_core::types::address::{self, Address, InternalAddress};
 use namada_core::types::key::common;
 use namada_core::types::storage::Epoch;
@@ -38,12 +40,14 @@ use rust_decimal::Decimal;
 use storage::{validator_max_commission_rate_change_key, validator_state_key};
 use thiserror::Error;
 use types::{
-    ActiveValidator, Bonds, Bonds_NEW, CommissionRates, CommissionRates_NEW,
-    GenesisValidator, Slash, SlashType, Slashes, TotalDeltas, TotalDeltas_NEW,
-    Unbond, Unbonds, ValidatorConsensusKeys, ValidatorConsensusKeys_NEW,
-    ValidatorDeltas, ValidatorDeltas_NEW, ValidatorSet, ValidatorSetUpdate,
-    ValidatorSets, ValidatorSets_NEW, ValidatorState, ValidatorStates,
-    ValidatorStates_NEW, ActiveValidatorSets_NEW, InactiveValidatorSets_NEW,
+    ActiveValidator, ActiveValidatorSets_NEW, Bonds, Bonds_NEW,
+    CommissionRates, CommissionRates_NEW, GenesisValidator,
+    InactiveValidatorSets_NEW, Position, Slash, SlashType, Slashes,
+    TotalDeltas, TotalDeltas_NEW, Unbond, Unbonds, ValidatorConsensusKeys,
+    ValidatorConsensusKeys_NEW, ValidatorDeltas, ValidatorDeltas_NEW,
+    ValidatorSet, ValidatorSetNew, ValidatorSetPositions_NEW,
+    ValidatorSetUpdate, ValidatorSets, ValidatorSets_NEW, ValidatorState,
+    ValidatorStates, ValidatorStates_NEW,
 };
 
 use crate::btree_set::BTreeSetShims;
@@ -1679,10 +1683,10 @@ impl From<CommissionRateChangeError> for storage_api::Error {
 }
 
 /// Get the storage handle to the Validator sets
-pub fn validator_sets_handle() -> ValidatorSets_NEW {
-    let key = storage::validator_set_key();
-    crate::epoched_new::Epoched::open(key)
-}
+// pub fn validator_sets_handle() -> ValidatorSets_NEW {
+//     let key = storage::validator_set_key();
+//     crate::epoched_new::Epoched::open(key)
+// }
 
 /// Get the storage handle to a PoS validator's consensus key (used for
 /// signing block votes).
@@ -1690,25 +1694,25 @@ pub fn validator_consensus_key_handle(
     validator: &Address,
 ) -> ValidatorConsensusKeys_NEW {
     let key = storage::validator_consensus_key_key(validator);
-    crate::epoched_new::Epoched::open(key)
+    ValidatorConsensusKeys_NEW::open(key)
 }
 
 /// Get the storage handle to a PoS validator's state
 pub fn validator_state_handle(validator: &Address) -> ValidatorStates_NEW {
     let key = storage::validator_state_key(validator);
-    crate::epoched_new::Epoched::open(key)
+    ValidatorStates_NEW::open(key)
 }
 
 /// Get the storage handle to a PoS validator's deltas
 pub fn validator_deltas_handle(validator: &Address) -> ValidatorDeltas_NEW {
     let key = storage::validator_deltas_key(validator);
-    crate::epoched_new::EpochedDelta::open(key)
+    ValidatorDeltas_NEW::open(key)
 }
 
 /// Get the storage handle to the total deltas
 pub fn total_deltas_handle() -> TotalDeltas_NEW {
     let key = storage::total_deltas_key();
-    crate::epoched_new::EpochedDelta::open(key)
+    TotalDeltas_NEW::open(key)
 }
 
 /// Get the storage handle to a PoS validator's commission rate
@@ -1716,7 +1720,7 @@ pub fn validator_commission_rate_handle(
     validator: &Address,
 ) -> CommissionRates_NEW {
     let key = storage::validator_commission_rate_key(validator);
-    crate::epoched_new::Epoched::open(key)
+    CommissionRates_NEW::open(key)
 }
 
 /// Get the storage handle to a bonds
@@ -1734,7 +1738,13 @@ pub fn bond_handle(
     } else {
         storage::bond_amount_key(&bond_id)
     };
-    crate::epoched_new::EpochedDelta::open(key)
+    Bonds_NEW::open(key)
+}
+
+/// Get the storage handle to a PoS validator's deltas
+pub fn validator_set_positions_handle() -> ValidatorSetPositions_NEW {
+    let key = storage::validator_set_positions_key();
+    ValidatorSetPositions_NEW::open(key)
 }
 
 /// new init genesis
@@ -1814,11 +1824,12 @@ where
         }
     }
     let validator_set = ValidatorSet { active, inactive };
-    validator_sets_handle().init_at_genesis(
-        storage,
-        validator_set,
-        current_epoch,
-    )?;
+    // TODO
+    // validator_sets_handle().init_at_genesis(
+    //     storage,
+    //     validator_set,
+    //     current_epoch,
+    // )?;
 
     total_deltas_handle().init_at_genesis(
         storage,
@@ -1884,12 +1895,16 @@ pub fn read_validator_stake<S>(
     params: &PosParams,
     validator: &Address,
     epoch: namada_core::types::storage::Epoch,
-) -> storage_api::Result<Option<token::Change>>
+) -> storage_api::Result<token::Amount>
 where
     S: for<'iter> StorageRead<'iter>,
 {
     let handle = validator_deltas_handle(&validator);
-    handle.get_sum(storage, epoch, params)
+    let amount = handle.get_sum(storage, epoch, params)?.unwrap_or_default();
+    let amount: u64 = amount
+        .try_into()
+        .wrap_err("validator_deltas sum must not overflow u64")?;
+    Ok(amount.into())
 }
 
 /// Write PoS validator's consensus key (used for signing block votes).
@@ -2133,6 +2148,7 @@ where
     // Update the validator set
     update_validator_set_new(
         storage,
+        &params,
         validator,
         token_change,
         change_offset,
@@ -2177,17 +2193,65 @@ fn update_validator_set_new<S>(
     inactive_validator_set: &mut InactiveValidatorSets_NEW,
     validator_deltas: &ValidatorDeltas_NEW,
     current_epoch: Epoch,
-)
+) -> storage_api::Result<()>
 where
     S: for<'iter> StorageRead<'iter> + StorageWrite,
 {
     let epoch = current_epoch + params.pipeline_len;
-    let tokens_pre = validator_deltas.get_sum(storage, epoch, params)?.unwrap_or_default();
+    let tokens_pre = read_validator_stake(storage, params, validator, epoch)?;
     let tokens_post = tokens_pre + token_change;
 
+    let position: Position = read_validator_set_position(
+        storage, validator, epoch,
+    )?
+    .ok_or_err_msg("validator must have stored validator set position")?;
+
     if tokens_pre != tokens_post {
-        let active_val_handle = active_validator_set.at(epoch).get_data_handler();
+        let epoch_active_val_handle = active_validator_set.at(&epoch);
+        let active_val_handle = epoch_active_val_handle.at(&tokens_pre);
+        if active_val_handle.contains(storage, &position)? {
+            // it's active
+            let removed = active_val_handle.remove(storage, &position)?;
+            debug_assert!(removed.is_some());
+            if tokens_post > tokens_pre {
+                let active_val_handle =
+                    epoch_active_val_handle.at(&tokens_post);
+                let next_position =
+                    find_next_position(&active_val_handle, storage)?;
+                active_val_handle.insert(
+                    storage,
+                    next_position,
+                    validator.clone(),
+                )?;
+            } else {
+                let max_inactive_validator = todo!();
+            }
+        } else {
+            // it's inactive
+            let epoch_inactive_val_handle = inactive_validator_set.at(&epoch);
+            let inactive_val_handle = epoch_inactive_val_handle.at(&tokens_pre);
+            let removed = inactive_val_handle.remove(storage, &position)?;
+            debug_assert!(removed.is_some());
+            if tokens_post < tokens_pre {
+                let inactive_val_handle =
+                    epoch_active_val_handle.at(&tokens_post);
+                let next_position =
+                    find_next_position(&inactive_val_handle, storage)?;
+                inactive_val_handle.insert(
+                    storage,
+                    next_position,
+                    validator.clone(),
+                )?;
+            } else {
+                let min_active_validator = todo!();
+            }
+        }
+
+        // let last_pos = h.rev_iter(storage).next();
+        // let first_pos = h.iter(storage).next();
     }
+
+    Ok(())
 
     // validator_set.update_from_offset(
     //     |validator_set, epoch| {
@@ -2262,4 +2326,33 @@ where
     //     change_offset,
     //     params,
     // )
+}
+
+fn read_validator_set_position<S>(
+    storage: &S,
+    validator: &Address,
+    epoch: Epoch,
+) -> storage_api::Result<Option<Position>>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let handle = validator_set_positions_handle();
+    handle.at(&epoch).get(storage, validator)
+}
+
+/// Find next position in a validator set or 0 if empty
+fn find_next_position<S>(
+    handle: &ValidatorSetNew,
+    storage: &S,
+) -> storage_api::Result<Position>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let next_position = handle
+        .rev_iter(storage)?
+        .next()
+        .transpose()?
+        .map(|(last_position, _addr)| Position::next(&last_position))
+        .unwrap_or_default();
+    Ok(next_position)
 }

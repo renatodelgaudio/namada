@@ -28,6 +28,7 @@ const BOND_REMAINING_STORAGE_KEY: &str = "bond_remaining";
 const UNBOND_STORAGE_KEY: &str = "unbond_NEW";
 const VALIDATOR_SET_STORAGE_KEY: &str = "validator_set_NEW";
 const TOTAL_DELTAS_STORAGE_KEY: &str = "total_deltas_NEW";
+const VALIDATOR_SET_POSITIONS_KEY: &str = "validator_set_positions_NEW";
 
 /// Is the given key a PoS storage key?
 pub fn is_pos_key(key: &Key) -> bool {
@@ -361,6 +362,12 @@ pub fn get_validator_address_from_bond(key: &Key) -> Option<Address> {
         },
         None => None,
     }
+}
+
+pub fn validator_set_positions_key() -> Key {
+    Key::from(ADDRESS.to_db_key())
+        .push(&VALIDATOR_SET_POSITIONS_KEY.to_owned())
+        .expect("Cannot obtain a storage key")
 }
 
 impl<D, H> PosBase for Storage<D, H>
