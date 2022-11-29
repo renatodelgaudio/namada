@@ -38,12 +38,12 @@ use rust_decimal::Decimal;
 use storage::{validator_max_commission_rate_change_key, validator_state_key};
 use thiserror::Error;
 use types::{
-    ActiveValidator, Bonds, Bonds_NEW, CommissionRates,
-    CommissionRates_NEW, GenesisValidator, Slash, SlashType, Slashes,
-    TotalDeltas, TotalDeltas_NEW, Unbond, Unbonds, ValidatorConsensusKeys,
-    ValidatorConsensusKeys_NEW, ValidatorDeltas, ValidatorDeltas_NEW,
-    ValidatorSet, ValidatorSetUpdate, ValidatorSets, ValidatorSets_NEW,
-    ValidatorState, ValidatorStates, ValidatorStates_NEW,
+    ActiveValidator, Bonds, Bonds_NEW, CommissionRates, CommissionRates_NEW,
+    GenesisValidator, Slash, SlashType, Slashes, TotalDeltas, TotalDeltas_NEW,
+    Unbond, Unbonds, ValidatorConsensusKeys, ValidatorConsensusKeys_NEW,
+    ValidatorDeltas, ValidatorDeltas_NEW, ValidatorSet, ValidatorSetUpdate,
+    ValidatorSets, ValidatorSets_NEW, ValidatorState, ValidatorStates,
+    ValidatorStates_NEW, ActiveValidatorSets_NEW, InactiveValidatorSets_NEW,
 };
 
 use crate::btree_set::BTreeSetShims;
@@ -1906,7 +1906,9 @@ where
 {
     let handle = validator_deltas_handle(&validator);
     let offset = OffsetPipelineLen::value(params);
-    let val = handle.get_delta_val(storage, current_epoch, params)?.unwrap_or_default();
+    let val = handle
+        .get_delta_val(storage, current_epoch, params)?
+        .unwrap_or_default();
     handle.set(storage, val + delta, current_epoch, offset)
 }
 
@@ -2058,7 +2060,9 @@ where
 {
     let params = storage.read_pos_params();
     if let Some(source) = source {
-        if source != validator && is_validator(storage, source, &params, current_epoch)? {
+        if source != validator
+            && is_validator(storage, source, &params, current_epoch)?
+        {
             return Err(
                 BondError::SourceMustNotBeAValidator(source.clone()).into()
             );
@@ -2087,7 +2091,10 @@ where
     }
 
     // Initialize or update the bond at the pipeline offset
-    let bond_id = BondId { source: source.clone(), validator: validator.clone() };
+    let bond_id = BondId {
+        source: source.clone(),
+        validator: validator.clone(),
+    };
     let offset = params.pipeline_len;
     if storage.has_key(&storage::bond_key(&bond_id))? {
         let cur_amount = bond_amount_handle
@@ -2124,11 +2131,30 @@ where
     }
 
     // Update the validator set
-    update_validator_set(params, validator, token_change, change_offset, validator_set, validator_deltas, current_epoch)
+    update_validator_set_new(
+        storage,
+        validator,
+        token_change,
+        change_offset,
+        validator_set,
+        validator_deltas,
+        current_epoch,
+    );
 
     // Update the validator and total deltas
-    update_validator_deltas(storage, &params, validator, token::Change::from(amount), current_epoch)?;
-    update_total_deltas(storage, &params, token::Change::from(amount), current_epoch)?;
+    update_validator_deltas(
+        storage,
+        &params,
+        validator,
+        token::Change::from(amount),
+        current_epoch,
+    )?;
+    update_total_deltas(
+        storage,
+        &params,
+        token::Change::from(amount),
+        current_epoch,
+    )?;
 
     // Transfer the bonded tokens from the source to PoS
     storage.transfer(
@@ -2140,18 +2166,29 @@ where
     Ok(())
 }
 
-/// NEW: Update validator set when a validator's receives a new bond and when its
-/// bond is unbonded (self-bond or delegation).
-fn update_validator_set_new(
+/// NEW: Update validator set when a validator receives a new bond and when
+/// its bond is unbonded (self-bond or delegation).
+fn update_validator_set_new<S>(
+    storage: &mut S,
     params: &PosParams,
     validator: &Address,
     token_change: token::Change,
-    change_offset: DynEpochOffset,
-    active_validator_set: &mut ValidatorSetNEW,
-    inactive_validator_set: &mut ValidatorSetNEW,
+    active_validator_set: &mut ActiveValidatorSets_NEW,
+    inactive_validator_set: &mut InactiveValidatorSets_NEW,
     validator_deltas: &ValidatorDeltas_NEW,
     current_epoch: Epoch,
-) {
+)
+where
+    S: for<'iter> StorageRead<'iter> + StorageWrite,
+{
+    let epoch = current_epoch + params.pipeline_len;
+    let tokens_pre = validator_deltas.get_sum(storage, epoch, params)?.unwrap_or_default();
+    let tokens_post = tokens_pre + token_change;
+
+    if tokens_pre != tokens_post {
+        let active_val_handle = active_validator_set.at(epoch).get_data_handler();
+    }
+
     // validator_set.update_from_offset(
     //     |validator_set, epoch| {
     //         // Find the validator's bonded stake at the epoch that's being

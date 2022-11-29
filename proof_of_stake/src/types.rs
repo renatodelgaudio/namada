@@ -8,10 +8,11 @@ use std::hash::Hash;
 use std::ops::Add;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use namada_core::ledger::storage_api::collections::lazy_map::NestedMap;
 use namada_core::ledger::storage_api::collections::LazyMap;
 use namada_core::types::address::Address;
 use namada_core::types::key::common;
-use namada_core::types::storage::Epoch;
+use namada_core::types::storage::{Epoch, KeySeg};
 use namada_core::types::token;
 use rust_decimal::prelude::{Decimal, ToPrimitive};
 
@@ -34,16 +35,18 @@ pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
     0,
 >;
 
+pub type ValidatorSets_NEW = NestedMap<token::Amount, ValidatorSetNew>;
+
 /// Epoched active validator sets.
-pub type ActiveValidatorSets_NEW = crate::epoched_new::Epoched<
-    ValidatorSetNew,
+pub type ActiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
+    ValidatorSets_NEW,
     crate::epoched_new::OffsetPipelineLen,
     2,
 >;
 
 /// Epoched inactive validator sets.
-pub type InactiveValidatorSets_NEW = crate::epoched_new::Epoched<
-    ValidatorSetNew,
+pub type InactiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
+    ValidatorSets_NEW,
     crate::epoched_new::OffsetPipelineLen,
     2,
 >;
@@ -211,8 +214,46 @@ pub struct ValidatorSet {
     pub inactive: BTreeSet<WeightedValidator>,
 }
 
+#[derive(
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Eq,
+    Clone,
+    Copy,
+    BorshDeserialize,
+    BorshSchema,
+    BorshSerialize,
+)]
+pub struct Position(u64);
+
+impl KeySeg for Position {
+    fn parse(string: String) -> namada_core::types::storage::Result<Self>
+    where
+        Self: Sized,
+    {
+        let raw = u64::parse(string)?;
+        Ok(Self(raw))
+    }
+
+    fn raw(&self) -> String {
+        self.0.raw()
+    }
+
+    fn to_db_key(&self) -> namada_core::types::storage::DbKeySeg {
+        self.0.to_db_key()
+    }
+}
+
+impl Position {
+    pub fn next(&self) -> Self {
+        Self(self.0.wrapping_add(1))
+    }
+}
+
 // New Validator set construction
-pub type ValidatorSetNew = LazyMap<u64, Address>;
+pub type ValidatorSetNew = LazyMap<Position, Address>;
 
 /// Validator's state.
 #[derive(
