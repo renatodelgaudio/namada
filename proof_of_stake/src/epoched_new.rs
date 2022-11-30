@@ -248,6 +248,26 @@ where
         let key = self.storage_prefix.push(&"data".to_owned()).unwrap();
         NestedMap::open(key)
     }
+
+    /// Initialize new nested data at the given epoch offset.
+    pub fn init<S>(
+        &self,
+        storage: &mut S,
+        epoch: Epoch,
+    ) -> storage_api::Result<()>
+    where
+        S: StorageWrite + for<'iter> StorageRead<'iter>,
+    {
+        let key = self.get_last_update_storage_key();
+        storage.write(&key, epoch)
+    }
+
+    fn get_last_update_storage_key(&self) -> storage::Key {
+        self.storage_prefix.push(&"last_update".to_owned()).unwrap()
+    }
+
+    // TODO: we may need an update_data() method, figure out when it should be
+    // called (in at()?)
 }
 
 impl<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64>

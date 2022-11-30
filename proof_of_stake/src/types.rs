@@ -5,7 +5,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::fmt::Display;
 use std::hash::Hash;
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use namada_core::ledger::storage_api::collections::lazy_map::NestedMap;
@@ -40,20 +40,15 @@ pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
     crate::epoched_new::OffsetPipelineLen,
 >;
 
-pub type ValidatorSets_NEW = NestedMap<token::Amount, ValidatorSetNew>;
+pub type ValidatorPositionAddresses_NEW = LazyMap<Position, Address>;
 
-// New Validator set construction
-pub type ValidatorSetNew = LazyMap<Position, Address>;
+/// New validator set construction, keyed by staked token amount
+pub type ValidatorSet_NEW =
+    NestedMap<token::Amount, ValidatorPositionAddresses_NEW>;
 
-/// Epoched active validator sets.
-pub type ActiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
-    ValidatorSets_NEW,
-    crate::epoched_new::OffsetPipelineLen,
->;
-
-/// Epoched inactive validator sets.
-pub type InactiveValidatorSets_NEW = crate::epoched_new::NestedEpoched<
-    ValidatorSets_NEW,
+/// Epoched validator sets.
+pub type ValidatorSets_NEW = crate::epoched_new::NestedEpoched<
+    ValidatorSet_NEW,
     crate::epoched_new::OffsetPipelineLen,
 >;
 
@@ -256,7 +251,17 @@ impl KeySeg for Position {
     }
 }
 
+impl Sub<Position> for Position {
+    type Output = Self;
+
+    fn sub(self, rhs: Position) -> Self::Output {
+        Position(self.0 - rhs.0)
+    }
+}
+
 impl Position {
+    pub const ONE: Position = Position(1_u64);
+
     pub fn next(&self) -> Self {
         Self(self.0.wrapping_add(1))
     }
