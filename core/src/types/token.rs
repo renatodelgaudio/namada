@@ -42,6 +42,11 @@ pub const SCALE: u64 = 1_000_000;
 pub type Change = i128;
 
 impl Amount {
+    /// Returns whether an amount is zero.
+    pub fn is_zero(&self) -> bool {
+        self.micro == 0
+    }
+
     /// Get the amount as a [`Change`]
     pub fn change(&self) -> Change {
         self.micro as Change
@@ -483,6 +488,15 @@ mod tests {
 
         let zero = Amount::from(0);
         assert_eq!("0", zero.to_string());
+    }
+
+    #[test]
+    fn test_amount_is_zero() {
+        let zero = Amount::from(0);
+        assert!(zero.is_zero());
+
+        let non_zero = Amount::from(1);
+        assert!(!non_zero.is_zero());
     }
 }
 
