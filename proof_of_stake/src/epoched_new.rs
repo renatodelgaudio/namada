@@ -29,7 +29,7 @@ pub struct Epoched<
     phantom_son: PhantomData<SON>,
 }
 
-// Discrete epoched data handle with nested lazy structure
+/// Discrete epoched data handle with nested lazy structure
 pub type NestedEpoched<Data, FutureEpochs, const NUM_PAST_EPOCHS: u64 = 0> =
     Epoched<Data, FutureEpochs, NUM_PAST_EPOCHS, collections::Nested>;
 
@@ -240,10 +240,12 @@ where
     FutureEpochs: EpochOffset,
     Data: LazyCollection + Debug,
 {
+    /// Get the lazy data structure that is keyed be the epoch number
     pub fn at(&self, key: &Epoch) -> Data {
         Data::open(self.get_data_handler().get_data_key(key))
     }
 
+    /// Get handle to the NestedMap
     fn get_data_handler(&self) -> NestedMap<Epoch, Data> {
         let key = self.storage_prefix.push(&"data".to_owned()).unwrap();
         NestedMap::open(key)
@@ -262,6 +264,7 @@ where
         storage.write(&key, epoch)
     }
 
+    /// Get the storage key holding the epoch corresponding to the last update
     fn get_last_update_storage_key(&self) -> storage::Key {
         self.storage_prefix.push(&"last_update".to_owned()).unwrap()
     }

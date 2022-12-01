@@ -388,6 +388,7 @@ pub fn get_validator_address_from_bond(key: &Key) -> Option<Address> {
     }
 }
 
+/// Get the current Position of a validator in the validator set
 pub fn validator_set_positions_key() -> Key {
     Key::from(ADDRESS.to_db_key())
         .push(&VALIDATOR_SET_POSITIONS_KEY.to_owned())

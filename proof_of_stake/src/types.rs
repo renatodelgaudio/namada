@@ -40,6 +40,7 @@ pub type ValidatorStates_NEW = crate::epoched_new::Epoched<
     crate::epoched_new::OffsetPipelineLen,
 >;
 
+/// Validator position and address, used in validator set construction
 pub type ValidatorPositionAddresses_NEW = LazyMap<Position, Address>;
 
 /// New validator set construction, keyed by staked token amount
@@ -217,6 +218,8 @@ pub struct ValidatorSet {
     pub inactive: BTreeSet<WeightedValidator>,
 }
 
+/// Position number of a validator in the validator set that is keyed by the
+/// staked token amount
 #[derive(
     PartialEq,
     PartialOrd,
@@ -260,8 +263,10 @@ impl Sub<Position> for Position {
 }
 
 impl Position {
+    /// 1 expressed as a Position
     pub const ONE: Position = Position(1_u64);
 
+    /// Get the next position number
     pub fn next(&self) -> Self {
         Self(self.0.wrapping_add(1))
     }
