@@ -551,6 +551,9 @@ where
         src: &namada_core::types::address::Address,
         dest: &namada_core::types::address::Address,
     ) {
+        if amount.is_zero() {
+            return;
+        }
         let src_key = token::balance_key(token, src);
         let dest_key = token::balance_key(token, dest);
         if let (Some(src_balance), _gas) = self
