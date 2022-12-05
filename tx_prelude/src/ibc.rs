@@ -3,7 +3,6 @@
 pub use namada_core::ledger::ibc::actions::{Error, IbcActions, Result};
 use namada_core::ledger::storage_api::{StorageRead, StorageWrite};
 use namada_core::ledger::tx_env::TxEnv;
-use namada_core::types::address::Address;
 pub use namada_core::types::ibc::IbcEvent;
 use namada_core::types::storage::{BlockHeight, Key};
 use namada_core::types::time::Rfc3339String;

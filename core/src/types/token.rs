@@ -10,7 +10,7 @@ use rust_decimal::prelude::{Decimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::types::address::{masp, Address, DecodeError as AddressError, InternalAddress};
+use crate::types::address::{masp, Address, DecodeError as AddressError};
 use crate::types::storage::{DbKeySeg, Key, KeySeg};
 
 /// Amount in micro units. For different granularity another representation

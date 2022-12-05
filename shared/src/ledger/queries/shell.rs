@@ -8,17 +8,13 @@ use namada_core::types::storage::BlockResults;
 
 use crate::ledger::events::log::dumb_queries;
 use crate::ledger::events::Event;
-use namada_core::ledger::storage::merkle_tree;
-use prost::Message;
-use tendermint_proto::crypto::{ProofOp, ProofOps};
 
 use crate::ledger::queries::types::{RequestCtx, RequestQuery};
 use crate::ledger::queries::{require_latest_height, EncodedResponseQuery};
 use crate::ledger::storage::traits::StorageHasher;
 use crate::ledger::storage::{DBIter, DB};
 use crate::ledger::storage_api::{self, ResultExt, StorageRead};
-use crate::tendermint::merkle::proof::Proof;
-use crate::tendermint_proto::crypto::{ProofOp, ProofOps};
+use crate::tendermint::merkle::proof::{Proof, ProofOp};
 use crate::types::storage::{self, Epoch, PrefixValue};
 #[cfg(any(test, feature = "async-client"))]
 use crate::types::transaction::TxResult;

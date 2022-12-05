@@ -2,14 +2,11 @@
 
 use std::collections::BTreeSet;
 
-use borsh::BorshDeserialize;
 use namada_core::ledger::slash_fund;
 /// SlashFund storage
 pub use namada_core::ledger::slash_fund::storage;
 use thiserror::Error;
 
-use super::governance::storage as gov_storage;
-use super::storage_api::StorageRead;
 use crate::ledger::native_vp::{self, governance, Ctx, NativeVp};
 use crate::ledger::storage::{self as ledger_storage, StorageHasher};
 use crate::ledger::storage_api::StorageRead;

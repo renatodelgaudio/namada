@@ -10,7 +10,6 @@ use arse_merkle_tree::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use ics23::commitment_proof::Proof as Ics23Proof;
 use ics23::{CommitmentProof, ExistenceProof, NonExistenceProof};
-use prost::Message;
 use thiserror::Error;
 
 use super::traits::{StorageHasher, SubTreeRead, SubTreeWrite};

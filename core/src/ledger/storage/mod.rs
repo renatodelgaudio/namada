@@ -8,7 +8,6 @@ pub mod traits;
 pub mod types;
 
 use core::fmt::Debug;
-use std::array;
 use std::collections::BTreeMap;
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -31,9 +30,6 @@ pub use traits::{Sha256Hasher, StorageHasher};
 
 use crate::ledger::gas::MIN_STORAGE_GAS;
 use crate::ledger::parameters::{self, EpochDuration, Parameters};
-pub use crate::ledger::storage::merkle_tree::{
-    MerkleTree, MerkleTreeStoresRead, MerkleTreeStoresWrite, StoreType, MembershipProof,
-};
 use crate::ledger::storage::merkle_tree::{
     Error as MerkleTreeError, MerkleRoot,
 };
@@ -49,7 +45,7 @@ use crate::types::chain::{ChainId, CHAIN_ID_LENGTH};
 #[cfg(feature = "ferveo-tpke")]
 use crate::types::internal::TxQueue;
 use crate::types::storage::{
-    BlockHash, BlockHeight, BlockResults, Epoch, Epochs, Header, Key, KeySeg, MerkleValue,
+    BlockHash, BlockHeight, BlockResults, Epoch, Epochs, Header, Key, KeySeg,
     TxIndex, BLOCK_HASH_LENGTH,
 };
 use crate::types::time::DateTimeUtc;

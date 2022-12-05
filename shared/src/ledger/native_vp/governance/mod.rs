@@ -4,7 +4,6 @@ pub mod utils;
 
 use std::collections::BTreeSet;
 
-use borsh::BorshDeserialize;
 use namada_core::ledger::governance::storage as gov_storage;
 use namada_core::ledger::storage;
 use namada_core::ledger::vp_env::VpEnv;

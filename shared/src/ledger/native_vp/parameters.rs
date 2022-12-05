@@ -8,8 +8,6 @@ use namada_core::types::address::{Address, InternalAddress};
 use namada_core::types::storage::Key;
 use thiserror::Error;
 
-use crate::ledger::governance::vp::is_proposal_accepted;
-use super::governance;
 use crate::ledger::governance::storage as gov_storage;
 use crate::ledger::native_vp::{self, Ctx, NativeVp};
 use crate::ledger::vp_env::VpEnv;

@@ -7,9 +7,6 @@ use std::fmt::{self, Display};
 use std::ops::{Index, IndexMut};
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use namada::ledger::native_vp::governance::utils::ProposalEvent;
-use namada::types::ibc::IbcEvent;
-use namada::types::transaction::{hash_tx, TxType};
 use thiserror::Error;
 
 use crate::ledger::native_vp::governance::utils::ProposalEvent;
