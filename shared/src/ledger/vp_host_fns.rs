@@ -4,7 +4,7 @@ use std::num::TryFromIntError;
 
 use namada_core::types::address::Address;
 use namada_core::types::hash::Hash;
-use namada_core::types::storage::{BlockHash, BlockHeight, Epoch, Key};
+use namada_core::types::storage::{BlockHash, BlockHeight, Epoch, Key, TxIndex};
 use thiserror::Error;
 
 use super::gas::MIN_STORAGE_GAS;
@@ -268,6 +268,15 @@ where
     let (epoch, gas) = storage.get_current_epoch();
     add_gas(gas_meter, gas)?;
     Ok(epoch)
+}
+
+/// Get the shielded transaction index.
+pub fn get_tx_index(
+    gas_meter: &mut VpGasMeter,
+    tx_index: &TxIndex,
+) -> EnvResult<TxIndex> {
+    add_gas(gas_meter, MIN_STORAGE_GAS)?;
+    Ok(*tx_index)
 }
 
 /// Getting the chain ID.

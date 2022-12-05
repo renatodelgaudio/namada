@@ -6,7 +6,7 @@ use super::storage_api::{self, StorageRead};
 use crate::types::address::Address;
 use crate::types::hash::Hash;
 use crate::types::key::common;
-use crate::types::storage::{BlockHash, BlockHeight, Epoch, Key};
+use crate::types::storage::{BlockHash, BlockHeight, Epoch, Key, TxIndex};
 
 /// Validity predicate's environment is available for native VPs and WASM VPs
 pub trait VpEnv<'view> {
@@ -56,6 +56,9 @@ pub trait VpEnv<'view> {
     /// current transaction is being applied.
     fn get_block_epoch(&'view self) -> Result<Epoch, storage_api::Error>;
 
+    /// Get the shielded transaction index.
+    fn get_tx_index(&'view self) -> Result<TxIndex, storage_api::Error>;
+
     /// Get the address of the native token.
     fn get_native_token(&'view self) -> Result<Address, storage_api::Error>;
 
@@ -96,6 +99,9 @@ pub trait VpEnv<'view> {
 
     /// Get a tx hash
     fn get_tx_code_hash(&self) -> Result<Hash, storage_api::Error>;
+
+    /// Verify a MASP transaction
+    fn verify_masp(&self, tx: Vec<u8>) -> Result<bool, storage_api::Error>;
 
     // ---- Methods below have default implementation via `pre/post` ----
 
