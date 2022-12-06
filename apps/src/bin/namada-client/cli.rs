@@ -108,6 +108,9 @@ pub async fn main() -> Result<()> {
             Utils::InitGenesisValidator(InitGenesisValidator(args)) => {
                 utils::init_genesis_validator(global_args, args)
             }
+            Utils::ValidateGenesisTemplates(ValidateGenesisTemplates(args)) => {
+                utils::validate_genesis_templates(global_args, args)
+            }
         },
     }
     Ok(())
