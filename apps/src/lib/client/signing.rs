@@ -9,8 +9,8 @@ use namada::types::storage::Epoch;
 use namada::types::transaction::{hash_tx, Fee, WrapperTx};
 
 use super::rpc;
-use crate::cli::context::{WalletAddress, WalletKeypair};
-use crate::cli::{self, args, Context};
+use crate::cli::context::{ChainContext, WalletAddress, WalletKeypair};
+use crate::cli::{self, args};
 use crate::client::tendermint_rpc_types::TxBroadcastData;
 use crate::facade::tendermint_config::net::Address as TendermintAddress;
 use crate::wallet::Wallet;
@@ -86,7 +86,7 @@ pub enum TxSigningKey {
 /// possible. If no explicit signer given, use the `default`. If no `default`
 /// is given, panics.
 pub async fn tx_signer(
-    ctx: &mut Context,
+    ctx: &mut ChainContext,
     args: &args::Tx,
     mut default: TxSigningKey,
 ) -> common::SecretKey {
@@ -141,12 +141,12 @@ pub async fn tx_signer(
 ///
 /// If it is a dry run, it is not put in a wrapper, but returned as is.
 pub async fn sign_tx(
-    mut ctx: Context,
+    ctx: &mut ChainContext,
     tx: Tx,
     args: &args::Tx,
     default: TxSigningKey,
-) -> (Context, TxBroadcastData) {
-    let keypair = tx_signer(&mut ctx, args, default).await;
+) -> TxBroadcastData {
+    let keypair = tx_signer(ctx, args, default).await;
     let tx = tx.sign(&keypair);
 
     let epoch = rpc::query_epoch(args::Query {
@@ -156,16 +156,16 @@ pub async fn sign_tx(
     let broadcast_data = if args.dry_run {
         TxBroadcastData::DryRun(tx)
     } else {
-        sign_wrapper(&ctx, args, epoch, tx, &keypair).await
+        sign_wrapper(ctx, args, epoch, tx, &keypair).await
     };
-    (ctx, broadcast_data)
+    broadcast_data
 }
 
 /// Create a wrapper tx from a normal tx. Get the hash of the
 /// wrapper and its payload which is needed for monitoring its
 /// progress on chain.
 pub async fn sign_wrapper(
-    ctx: &Context,
+    ctx: &ChainContext,
     args: &args::Tx,
     epoch: Epoch,
     tx: Tx,
