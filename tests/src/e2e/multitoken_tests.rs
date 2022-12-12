@@ -4,9 +4,25 @@ use super::helpers::get_actor_rpc;
 use super::setup::constants::{
     wasm_abs_path, BERTHA, NAM, VP_ALWAYS_TRUE_WASM,
 };
-use super::setup::{self, Bin, Who};
+use super::setup::{self, Bin, Test, Who};
 use crate::{run, run_as};
 
+fn get_address_for_alias(test: &Test, alias: &str) -> Result<String> {
+    let wallet_find_address = run!(
+        test,
+        Bin::Wallet,
+        vec!["address", "find", "--alias", alias],
+        Some(40)
+    )?
+    .background();
+    // sleep a couple secs so the command has chance to run? maybe this isn't
+    // necessary
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    let mut wallet_find_address = wallet_find_address.foreground();
+
+    let (_, addr) = wallet_find_address.exp_regex(r"atest1\w+")?;
+    Ok(addr)
+}
 #[test]
 fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let test = setup::single_node_net()?;
@@ -50,9 +66,14 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         "--ledger-address",
         &rpc_addr,
     ];
-    let mut client = run!(test, Bin::Client, init_account_args, Some(40))?;
-    client.exp_string("Transaction is valid.")?;
-    client.assert_success();
+    let mut client_init_account =
+        run!(test, Bin::Client, init_account_args, Some(40))?;
+    client_init_account.exp_string("Transaction is valid.")?;
+    client_init_account.exp_string("Transaction applied")?;
+    client_init_account.assert_success();
+
+    let multitoken_vp_addr = get_address_for_alias(&test, multitoken_alias)?;
+    println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
     // establish a multitoken VP
     // - #atest5blah/tokens/red/balance/$albert = 100
