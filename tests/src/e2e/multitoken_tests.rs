@@ -8,7 +8,9 @@ use super::setup::constants::{
     wasm_abs_path, BERTHA, NAM, VP_ALWAYS_TRUE_WASM,
 };
 use super::setup::{self, Bin, Test, Who};
-use crate::e2e::setup::constants::{ALBERT, TX_WRITE_STORAGE_KEY_WASM};
+use crate::e2e::setup::constants::{
+    ALBERT, CHRISTEL, TX_WRITE_STORAGE_KEY_WASM,
+};
 use crate::{run, run_as};
 
 const MULTITOKEN_KEY_SEGMENT: &str = "tokens";
@@ -133,5 +135,54 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
 
     // make a transfer from Albert to Bertha, signed by Christel - this should
     // be rejected
+    let sub_prefix = "tokens/red";
+    let albert_transfer_args = vec![
+        "transfer",
+        "--token",
+        multitoken_alias,
+        "--sub-prefix",
+        sub_prefix,
+        "--source",
+        ALBERT,
+        "--target",
+        BERTHA,
+        "--signer",
+        CHRISTEL,
+        "--amount",
+        "10",
+        "--ledger-address",
+        &rpc_addr,
+    ];
+    let mut albert_transfer_tx =
+        run!(test, Bin::Client, albert_transfer_args, Some(40))?;
+    albert_transfer_tx.exp_string("Transaction applied with result")?;
+    albert_transfer_tx.exp_string("Transaction is invalid")?;
+    albert_transfer_tx.exp_string(&format!("Rejected: {albert_addr}"))?;
+    albert_transfer_tx.assert_success();
+
+    // make a transfer from Albert to Bertha, signed by Albert - this should
+    // be accepted
+    let albert_transfer_args = vec![
+        "transfer",
+        "--token",
+        multitoken_alias,
+        "--sub-prefix",
+        sub_prefix,
+        "--source",
+        ALBERT,
+        "--target",
+        BERTHA,
+        "--signer",
+        ALBERT,
+        "--amount",
+        "10",
+        "--ledger-address",
+        &rpc_addr,
+    ];
+    let mut albert_transfer_tx =
+        run!(test, Bin::Client, albert_transfer_args, Some(40))?;
+    albert_transfer_tx.exp_string("Transaction applied with result")?;
+    albert_transfer_tx.exp_string("Transaction is valid")?;
+    albert_transfer_tx.assert_success();
     Ok(())
 }
