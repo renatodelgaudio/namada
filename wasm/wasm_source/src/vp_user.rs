@@ -94,7 +94,15 @@ fn validate_tx(
                     }
                 }
             }
-            _ => false,
+            Err(err) => {
+                // TODO: propagate this error rather than returning false?
+                debug_log!(
+                    "Error while parsing tx_data: {:?}, error: {:?}",
+                    tx_data,
+                    err
+                );
+                false
+            }
         });
 
     if !is_valid_tx(ctx, &tx_data)? {
