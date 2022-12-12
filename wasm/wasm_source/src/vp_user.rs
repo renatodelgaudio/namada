@@ -75,6 +75,13 @@ fn validate_tx(
                             Ok(true)
                         )
                     }
+                    Ok(None) => {
+                        debug_log!(
+                            "No public key found for address: {:?}",
+                            addr
+                        );
+                        false
+                    }
                     _ => false,
                 }
             }
