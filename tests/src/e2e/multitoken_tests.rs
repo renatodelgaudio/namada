@@ -7,7 +7,7 @@ use super::helpers::get_actor_rpc;
 use super::setup::constants::{
     wasm_abs_path, BERTHA, NAM, VP_ALWAYS_TRUE_WASM,
 };
-use super::setup::{self, Bin, Test, Who};
+use super::setup::{self, Bin, NamadaCmd, Test, Who};
 use crate::e2e::setup::constants::{
     ALBERT, CHRISTEL, TX_WRITE_STORAGE_KEY_WASM,
 };
@@ -103,13 +103,42 @@ fn mint_red_tokens(
         "--data-path",
         &tx_data_path,
         "--ledger-address",
-        &rpc_addr,
+        rpc_addr,
     ];
     let mut client_tx = run!(test, Bin::Client, tx_args, Some(40))?;
     client_tx.exp_string("Transaction is valid.")?;
     client_tx.exp_string("Transaction applied")?;
     client_tx.assert_success();
     Ok(())
+}
+
+fn attempt_red_tokens_transfer(
+    test: &Test,
+    rpc_addr: &str,
+    multitoken: &str,
+    from: &str,
+    to: &str,
+    signer: &str,
+) -> Result<NamadaCmd> {
+    let sub_prefix = "tokens/red";
+    let transfer_args = vec![
+        "transfer",
+        "--token",
+        multitoken,
+        "--sub-prefix",
+        sub_prefix,
+        "--source",
+        from,
+        "--target",
+        to,
+        "--signer",
+        signer,
+        "--amount",
+        "10",
+        "--ledger-address",
+        rpc_addr,
+    ];
+    run!(test, Bin::Client, transfer_args, Some(40))
 }
 
 #[test]
@@ -139,54 +168,31 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
 
     // make a transfer from Albert to Bertha, signed by Christel - this should
     // be rejected
-    let sub_prefix = "tokens/red";
-    let albert_transfer_args = vec![
-        "transfer",
-        "--token",
-        &multitoken_alias,
-        "--sub-prefix",
-        sub_prefix,
-        "--source",
-        ALBERT,
-        "--target",
-        BERTHA,
-        "--signer",
-        CHRISTEL,
-        "--amount",
-        "10",
-        "--ledger-address",
+    let mut unauthorized_transfer = attempt_red_tokens_transfer(
+        &test,
         &rpc_addr,
-    ];
-    let mut albert_transfer_tx =
-        run!(test, Bin::Client, albert_transfer_args, Some(40))?;
-    albert_transfer_tx.exp_string("Transaction applied with result")?;
-    albert_transfer_tx.exp_string("Transaction is invalid")?;
-    albert_transfer_tx.exp_string(&format!("Rejected: {albert_addr}"))?;
-    albert_transfer_tx.assert_success();
+        &multitoken_alias,
+        ALBERT,
+        BERTHA,
+        CHRISTEL,
+    )?;
+    unauthorized_transfer.exp_string("Transaction applied with result")?;
+    unauthorized_transfer.exp_string("Transaction is invalid")?;
+    unauthorized_transfer.exp_string(&format!("Rejected: {albert_addr}"))?;
+    unauthorized_transfer.assert_success();
 
     // make a transfer from Albert to Bertha, signed by Albert - this should
     // be accepted
-    let albert_transfer_args = vec![
-        "transfer",
-        "--token",
-        &multitoken_alias,
-        "--sub-prefix",
-        sub_prefix,
-        "--source",
-        ALBERT,
-        "--target",
-        BERTHA,
-        "--signer",
-        ALBERT,
-        "--amount",
-        "10",
-        "--ledger-address",
+    let mut authorized_transfer = attempt_red_tokens_transfer(
+        &test,
         &rpc_addr,
-    ];
-    let mut albert_transfer_tx =
-        run!(test, Bin::Client, albert_transfer_args, Some(40))?;
-    albert_transfer_tx.exp_string("Transaction applied with result")?;
-    albert_transfer_tx.exp_string("Transaction is valid")?;
-    albert_transfer_tx.assert_success();
+        &multitoken_alias,
+        ALBERT,
+        BERTHA,
+        ALBERT,
+    )?;
+    authorized_transfer.exp_string("Transaction applied with result")?;
+    authorized_transfer.exp_string("Transaction is valid")?;
+    authorized_transfer.assert_success();
     Ok(())
 }
