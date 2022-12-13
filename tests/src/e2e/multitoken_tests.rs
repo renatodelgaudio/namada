@@ -15,6 +15,7 @@ use crate::{run, run_as};
 
 const MULTITOKEN_KEY_SEGMENT: &str = "tokens";
 const BALANCE_KEY_SEGMENT: &str = "balance";
+const RED_TOKEN_KEY_SEGMENT: &str = "red";
 
 const ARBITRARY_SIGNER: &str = ALBERT;
 
@@ -74,6 +75,43 @@ fn init_multitoken_vp(test: &Test, rpc_addr: &str) -> Result<String> {
     Ok(multitoken_alias.to_string())
 }
 
+/// Mint 100 red tokens to the given address.
+fn mint_red_tokens(
+    test: &Test,
+    rpc_addr: &str,
+    multitoken: &Address,
+    owner: &Address,
+) -> Result<()> {
+    let red_balance_key = storage::Key::from(multitoken.to_db_key())
+        .push(&MULTITOKEN_KEY_SEGMENT.to_owned())?
+        .push(&RED_TOKEN_KEY_SEGMENT.to_owned())?
+        .push(&BALANCE_KEY_SEGMENT.to_owned())?
+        .push(owner)?;
+
+    let tx_code_path = wasm_abs_path(TX_WRITE_STORAGE_KEY_WASM);
+    let tx_data_path = test.test_dir.path().join("TODO_randomize_this.txt");
+    std::fs::write(&tx_data_path, format!("{red_balance_key}"))?;
+
+    let tx_data_path = tx_data_path.to_string_lossy().to_string();
+    let tx_code_path = tx_code_path.to_string_lossy().to_string();
+    let tx_args = vec![
+        "tx",
+        "--signer",
+        ARBITRARY_SIGNER,
+        "--code-path",
+        &tx_code_path,
+        "--data-path",
+        &tx_data_path,
+        "--ledger-address",
+        &rpc_addr,
+    ];
+    let mut client_tx = run!(test, Bin::Client, tx_args, Some(40))?;
+    client_tx.exp_string("Transaction is valid.")?;
+    client_tx.exp_string("Transaction applied")?;
+    client_tx.assert_success();
+    Ok(())
+}
+
 #[test]
 fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let test = setup::single_node_net()?;
@@ -96,48 +134,8 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let multitoken_vp_addr = get_address_for_alias(&test, &multitoken_alias)?;
     println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
-    const RED_TOKEN_KEY_SEGMENT: &str = "red";
-
     let albert_addr = get_address_for_alias(&test, ALBERT)?;
-    let albert_red_balance = storage::Key::from(multitoken_vp_addr.to_db_key())
-        .push(&MULTITOKEN_KEY_SEGMENT.to_owned())?
-        .push(&RED_TOKEN_KEY_SEGMENT.to_owned())?
-        .push(&BALANCE_KEY_SEGMENT.to_owned())?
-        .push(&albert_addr)?;
-    println!("Albert's red token balance key: {}", albert_red_balance);
-
-    let bertha_addr = get_address_for_alias(&test, BERTHA)?;
-    let bertha_red_balance = storage::Key::from(multitoken_vp_addr.to_db_key())
-        .push(&MULTITOKEN_KEY_SEGMENT.to_owned())?
-        .push(&RED_TOKEN_KEY_SEGMENT.to_owned())?
-        .push(&BALANCE_KEY_SEGMENT.to_owned())?
-        .push(&bertha_addr)?;
-    println!("Bertha's red token balance key: {}", bertha_red_balance);
-
-    let tx_code_path = wasm_abs_path(TX_WRITE_STORAGE_KEY_WASM);
-    let tx_data_path = test
-        .test_dir
-        .path()
-        .join("albert_red_token_balance_key.txt");
-    std::fs::write(&tx_data_path, format!("{albert_red_balance}"))?;
-
-    let tx_data_path = tx_data_path.to_string_lossy().to_string();
-    let tx_code_path = tx_code_path.to_string_lossy().to_string();
-    let tx_args = vec![
-        "tx",
-        "--signer",
-        ARBITRARY_SIGNER,
-        "--code-path",
-        &tx_code_path,
-        "--data-path",
-        &tx_data_path,
-        "--ledger-address",
-        &rpc_addr,
-    ];
-    let mut client_tx = run!(test, Bin::Client, tx_args, Some(40))?;
-    client_tx.exp_string("Transaction is valid.")?;
-    client_tx.exp_string("Transaction applied")?;
-    client_tx.assert_success();
+    mint_red_tokens(&test, &rpc_addr, &multitoken_vp_addr, &albert_addr)?;
 
     // make a transfer from Albert to Bertha, signed by Christel - this should
     // be rejected
