@@ -34,20 +34,9 @@ fn get_address_for_alias(test: &Test, alias: &str) -> Result<Address> {
     let (_, addr) = wallet_find_address.exp_regex(r"atest1\w+")?;
     Ok(Address::decode(addr)?)
 }
-#[test]
-fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
-    let test = setup::single_node_net()?;
-    let mut ledger =
-        run_as!(test, Who::Validator(0), Bin::Node, &["ledger"], Some(40))?;
-    ledger.exp_string("Namada ledger node started")?;
-    // TODO(namada#867): we only need to wait until the RPC server is available,
-    // not necessarily for a block to be committed
-    // ledger.exp_string("Starting RPC HTTP server on")?;
-    ledger.exp_regex(r"Committed block hash.*, height: [0-9]+")?;
-    let _bg_ledger = ledger.background();
 
-    let rpc_addr = get_actor_rpc(&test, &Who::Validator(0));
-
+/// Initializes a VP to represent a multitoken account.
+fn init_multitoken_vp(test: &Test, rpc_addr: &str) -> Result<String> {
     // we use a VP that always returns true for the multitoken VP here, as we
     // are testing out the VPs of the sender and receiver of multitoken
     // transactions here - not any multitoken VP itself
@@ -75,19 +64,36 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         "--gas-token",
         NAM,
         "--ledger-address",
-        &rpc_addr,
+        rpc_addr,
     ];
     let mut client_init_account =
         run!(test, Bin::Client, init_account_args, Some(40))?;
     client_init_account.exp_string("Transaction is valid.")?;
     client_init_account.exp_string("Transaction applied")?;
     client_init_account.assert_success();
+    Ok(multitoken_alias.to_string())
+}
+
+#[test]
+fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
+    let test = setup::single_node_net()?;
+    let mut ledger =
+        run_as!(test, Who::Validator(0), Bin::Node, &["ledger"], Some(40))?;
+    ledger.exp_string("Namada ledger node started")?;
+    // TODO(namada#867): we only need to wait until the RPC server is available,
+    // not necessarily for a block to be committed
+    // ledger.exp_string("Starting RPC HTTP server on")?;
+    ledger.exp_regex(r"Committed block hash.*, height: [0-9]+")?;
+    let _bg_ledger = ledger.background();
+
+    let rpc_addr = get_actor_rpc(&test, &Who::Validator(0));
+    let multitoken_alias = init_multitoken_vp(&test, &rpc_addr)?;
 
     // establish a multitoken VP with the following balances
     // - #atest5blah/tokens/red/balance/$albert = 100
     // - #atest5blah/tokens/red/balance/$bertha = 0
 
-    let multitoken_vp_addr = get_address_for_alias(&test, multitoken_alias)?;
+    let multitoken_vp_addr = get_address_for_alias(&test, &multitoken_alias)?;
     println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
     const RED_TOKEN_KEY_SEGMENT: &str = "red";
@@ -139,7 +145,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let albert_transfer_args = vec![
         "transfer",
         "--token",
-        multitoken_alias,
+        &multitoken_alias,
         "--sub-prefix",
         sub_prefix,
         "--source",
@@ -165,7 +171,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let albert_transfer_args = vec![
         "transfer",
         "--token",
-        multitoken_alias,
+        &multitoken_alias,
         "--sub-prefix",
         sub_prefix,
         "--source",
