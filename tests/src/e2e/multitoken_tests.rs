@@ -1,7 +1,10 @@
+use std::path::PathBuf;
+
 use color_eyre::eyre::Result;
 use namada_core::types::address::Address;
 use namada_core::types::storage;
 use namada_tx_prelude::storage::KeySeg;
+use rand::Rng;
 
 use super::helpers::get_actor_rpc;
 use super::setup::constants::{
@@ -75,6 +78,25 @@ fn init_multitoken_vp(test: &Test, rpc_addr: &str) -> Result<String> {
     Ok(multitoken_alias.to_string())
 }
 
+/// Generates a random path within the `test` directory.
+fn generate_random_test_dir_path(test: &Test) -> PathBuf {
+    let rng = rand::thread_rng();
+    let random_string: String = rng
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(24)
+        .map(char::from)
+        .collect();
+    test.test_dir.path().join(random_string)
+}
+
+/// Writes `contents` to a random path within the `test` directory, and return
+/// the path.
+fn write_test_file(test: &Test, contents: impl AsRef<[u8]>) -> Result<PathBuf> {
+    let path = generate_random_test_dir_path(test);
+    std::fs::write(&path, contents)?;
+    Ok(path)
+}
+
 /// Mint 100 red tokens to the given address.
 fn mint_red_tokens(
     test: &Test,
@@ -89,8 +111,7 @@ fn mint_red_tokens(
         .push(owner)?;
 
     let tx_code_path = wasm_abs_path(TX_WRITE_STORAGE_KEY_WASM);
-    let tx_data_path = test.test_dir.path().join("TODO_randomize_this.txt");
-    std::fs::write(&tx_data_path, format!("{red_balance_key}"))?;
+    let tx_data_path = write_test_file(test, format!("{red_balance_key}"))?;
 
     let tx_data_path = tx_data_path.to_string_lossy().to_string();
     let tx_code_path = tx_code_path.to_string_lossy().to_string();
