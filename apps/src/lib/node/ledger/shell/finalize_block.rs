@@ -531,9 +531,7 @@ mod test_finalize_block {
         let mut valid_txs = vec![];
 
         // create two decrypted txs
-        let wasm_path = TestWasms::TxNoOp.path();
-        let tx_code = std::fs::read(wasm_path)
-            .expect("Expected a file at given code path");
+        let tx_code = TestWasms::TxNoOp.bytes();
         for i in 0..2 {
             let raw_tx = Tx::new(
                 tx_code.clone(),
