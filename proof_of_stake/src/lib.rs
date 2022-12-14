@@ -21,6 +21,7 @@ pub mod types;
 pub mod validation;
 
 use core::fmt::Debug;
+use std::cmp;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::num::TryFromIntError;
@@ -48,11 +49,11 @@ use storage::{
 };
 use thiserror::Error;
 use types::{
-    ActiveValidator, ActiveValidatorSetNew, ActiveValidatorSetsNew, Bonds,
-    BondsNew, CommissionRates, CommissionRatesNew, GenesisValidator,
-    InactiveValidatorSetNew, InactiveValidatorSetsNew, Position, Slash,
-    SlashNew, SlashType, Slashes, SlashesNew, TotalDeltas, TotalDeltasNew,
-    Unbond, UnbondNew, Unbonds, ValidatorConsensusKeys,
+    ActiveValidator, ActiveValidatorSetNew, ActiveValidatorSetsNew,
+    AllSlashesNew, Bonds, BondsNew, CommissionRates, CommissionRatesNew,
+    GenesisValidator, InactiveValidatorSetNew, InactiveValidatorSetsNew,
+    Position, Slash, SlashNew, SlashType, Slashes, SlashesNew, TotalDeltas,
+    TotalDeltasNew, Unbond, UnbondNew, Unbonds, ValidatorConsensusKeys,
     ValidatorConsensusKeysNew, ValidatorDeltas, ValidatorDeltasNew,
     ValidatorPositionAddressesNew, ValidatorSet, ValidatorSetPositionsNew,
     ValidatorSetUpdate, ValidatorSets, ValidatorState, ValidatorStates,
@@ -2833,7 +2834,7 @@ where
     let params = read_pos_params(storage)?;
     let source = source.unwrap_or(validator);
 
-    let slashes = validator_slashes_handle(validator);
+    let validator_slashes = validator_slashes_handle(validator);
     // TODO: need some error handling to determine if this unbond even exists?
     let unbond_handle = unbond_handle(source, validator);
 
@@ -2856,21 +2857,23 @@ where
         });
         let ((end_epoch, start_epoch), amount) = unbond_info.unwrap();
 
-        // TODO: worry about updating this later after PR 740 perhaps
+        // TODO:
         // 1. cubic slashing
         // 2. adding slash rates in same epoch, applying cumulatively in dif
         // epochs
         if end_epoch > current_epoch {
             break;
         }
-        for slash in slashes.iter(storage)? {
-            let SlashNew {
+        for slash in validator_slashes.iter(storage)? {
+            let Slash {
                 epoch,
                 block_height: _,
                 r#type: slash_type,
+                rate: _,
             } = slash?;
             if epoch > start_epoch && epoch < end_epoch {
-                let slash_rate = slash_type.get_slash_rate(&params);
+                let slash_rate =
+                    get_cubic_slash_rate(storage, &params, epoch, slash_type)?;
                 let to_slash = token::Amount::from(decimal_mult_u64(
                     slash_rate,
                     u64::from(amount),
@@ -2964,7 +2967,6 @@ where
 {
     let rate = slash_type.get_slash_rate(params);
     let slash = SlashNew {
-        epoch: evidence_epoch,
         block_height: evidence_block_height.into(),
         r#type: slash_type,
     };
@@ -3081,4 +3083,60 @@ pub fn credit_tokens_new<S>(
     storage
         .write(&key, encode(&new_balance))
         .expect("Unable to write token balance for PoS system");
+}
+
+// Some cubic slashing stuff - may want to move into its own file
+
+/// Get the storage handle to a PoS validator's deltas
+pub fn slashes_handle() -> AllSlashesNew {
+    let key = storage::all_slashes_key();
+    AllSlashesNew::open(key)
+}
+
+/// Calculate cubic slashing rate
+pub fn get_cubic_slash_rate<S>(
+    storage: &mut S,
+    params: &PosParams,
+    infraction_epoch: Epoch,
+    current_slash_type: SlashType,
+) -> storage_api::Result<Decimal>
+where
+    S: for<'iter> StorageRead<'iter>,
+{
+    let mut sum_vp_fraction = Decimal::ZERO;
+    let start_epoch = infraction_epoch - params.cubic_slashing_window_length;
+    let num_epochs = 2 * params.cubic_slashing_window_length + 1;
+    for epoch in Epoch::iter_range(start_epoch, num_epochs) {
+        let slashes = slashes_handle().at(&epoch);
+        let infracting_stake =
+            slashes.iter(storage)?.fold(Decimal::ZERO, |sum, res| {
+                let (key, _slash) = res?;
+                match key {
+                    NestedSubKey::Data {
+                        key,
+                        nested_sub_key: _,
+                    } => {
+                        let validator_stake =
+                            read_validator_stake(storage, params, &key, epoch)?;
+                        sum + Decimal::from(validator_stake)
+                        // TODO: does something more complex need to be done
+                        // here in the event some of these slashes correspond to
+                        // the same validator
+                    }
+                }
+            });
+        let total_stake = read_total_stake(storage, params, epoch)?
+            .map(Decimal::from)
+            .unwrap();
+        sum_vp_fraction += infracting_stake / total_stake;
+    }
+    // Need some truncation right now to max the rate at 100%
+    let rate = cmp::min(
+        Decimal::ONE,
+        cmp::max(
+            current_slash_type.get_slash_rate(params),
+            9 * sum_vp_fraction * sum_vp_fraction,
+        ),
+    );
+    Ok(rate)
 }

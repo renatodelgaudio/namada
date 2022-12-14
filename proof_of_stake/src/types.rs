@@ -98,6 +98,16 @@ pub type BondsNew = crate::epoched_new::EpochedDelta<
     21,
 >;
 
+/// Slashes indexed by validator address
+pub type ValidatorSlashesNew = NestedMap<Address, LazyVec<SlashNew>>;
+
+/// Epoched slashes
+pub type AllSlashesNew = crate::epoched_new::NestedEpoched<
+    ValidatorSlashesNew,
+    crate::epoched_new::OffsetUnbondingLen,
+    U64_MAX,
+>;
+
 /// Epochs validator's unbonds
 /// TODO: should we make a NestedEpochedDelta for this where outer epoch is end
 /// and inner is begin???
@@ -367,8 +377,6 @@ pub type Slashes = Vec<Slash>;
 /// their staked tokens at and before the epoch of the slash.
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub struct SlashNew {
-    /// Epoch at which the slashable event occurred.
-    pub epoch: Epoch,
     /// Block height at which the slashable event occurred.
     pub block_height: u64,
     /// A type of slashsable event.
@@ -377,9 +385,9 @@ pub struct SlashNew {
 
 /// Slashes applied to validator, to punish byzantine behavior by removing
 /// their staked tokens at and before the epoch of the slash.
-pub type SlashesNew = LazyVec<SlashNew>;
+pub type SlashesNew = LazyVec<Slash>;
 
-/// A type of slashsable event.
+/// A type of slashable event.
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub enum SlashType {
     /// Duplicate block vote.
