@@ -330,6 +330,7 @@ where
 /// are covered by the e2e tests.
 #[cfg(test)]
 mod test_finalize_block {
+    use namada::core::test_utils::TestWasms;
     use namada::types::storage::Epoch;
     use namada::types::transaction::{EncryptionKey, Fee};
 
@@ -530,8 +531,7 @@ mod test_finalize_block {
         let mut valid_txs = vec![];
 
         // create two decrypted txs
-        let mut wasm_path = top_level_directory();
-        wasm_path.push("wasm_for_tests/tx_no_op.wasm");
+        let wasm_path = TestWasms::TxNoOp.path();
         let tx_code = std::fs::read(wasm_path)
             .expect("Expected a file at given code path");
         for i in 0..2 {
