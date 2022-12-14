@@ -7,6 +7,7 @@ members = [
   "proof_of_stake",
   "shared",
   "tests",
+  "test_utils",
   "tx_prelude",
   "vm_env",
   "macros",
