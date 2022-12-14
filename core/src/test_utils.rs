@@ -17,6 +17,7 @@ pub enum TestWasms {
     TxReadStorageKey,
     TxProposalCode,
     VpAlwaysTrue,
+    VpAlwaysFalse,
     VpEval,
     VpMemoryLimit,
 }
@@ -33,6 +34,7 @@ impl TestWasms {
             TestWasms::TxReadStorageKey => "tx_read_storage_key.wasm",
             TestWasms::TxProposalCode => "tx_proposal_code.wasm",
             TestWasms::VpAlwaysTrue => "vp_always_true.wasm",
+            TestWasms::VpAlwaysFalse => "vp_always_false.wasm",
             TestWasms::VpEval => "vp_eval.wasm",
             TestWasms::VpMemoryLimit => "vp_memory_limit.wasm",
         };
