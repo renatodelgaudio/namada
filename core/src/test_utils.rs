@@ -1,6 +1,9 @@
 //! Utilities for use in tests.
 
+use std::env;
 use std::path::PathBuf;
+
+use git2::Repository;
 
 /// Corresponds to wasms that we build for tests (under the `wasm_for_tests/`
 /// directory).
@@ -19,7 +22,8 @@ pub enum TestWasms {
 }
 
 impl TestWasms {
-    /// Get the path to this test wasm.
+    /// Get the path to where this test wasm is expected to be, or panic if not
+    /// able to.
     pub fn path(&self) -> PathBuf {
         let filename = match self {
             TestWasms::TxNoOp => "tx_no_op.wasm",
@@ -32,7 +36,13 @@ impl TestWasms {
             TestWasms::VpEval => "vp_eval.wasm",
             TestWasms::VpMemoryLimit => "vp_memory_limit.wasm",
         };
-        PathBuf::from("../wasm_for_tests").join(filename)
+        let repo_root =
+            Repository::discover(env::current_dir().unwrap()).unwrap();
+        repo_root
+            .workdir()
+            .unwrap()
+            .join("wasm_for_tests")
+            .join(filename)
     }
 
     /// Attempts to read the contents of this test wasm. Panics if it is not
@@ -42,5 +52,16 @@ impl TestWasms {
         std::fs::read(&path).unwrap_or_else(|_| {
             panic!("Could not read wasm at path {}", path.to_string_lossy())
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wasms_path() {
+        let path = TestWasms::TxNoOp.path();
+        assert!(path.exists());
     }
 }
