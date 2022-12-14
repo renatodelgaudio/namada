@@ -9,8 +9,9 @@ use git2::Repository;
 /// wasms can be found.
 pub const WASM_FOR_TESTS_DIR: &str = "wasm_for_tests";
 
-/// Corresponds to wasms that we build for tests (under the `wasm_for_tests/`
-/// directory).
+/// Corresponds to wasms that we build for tests, under [`WASM_FOR_TESTS_DIR`].
+/// See the `wasm_for_tests/wasm_source` crate for documentation on what these
+/// wasms do.
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy)]
 pub enum TestWasms {
