@@ -59,6 +59,31 @@ pub fn init_multitoken_vp(test: &Test, rpc_addr: &str) -> Result<String> {
     Ok(multitoken_alias.to_string())
 }
 
+pub fn init_established_account(
+    test: &Test,
+    rpc_addr: &str,
+    source_alias: &str,
+    established_alias: &str,
+) -> Result<()> {
+    let init_account_args = vec![
+        "init-account",
+        "--source",
+        source_alias,
+        "--public-key",
+        source_alias,
+        "--alias",
+        established_alias,
+        "--ledger-address",
+        &rpc_addr,
+    ];
+    let mut client_init_account =
+        run!(test, Bin::Client, init_account_args, Some(40))?;
+    client_init_account.exp_string("Transaction is valid.")?;
+    client_init_account.exp_string("Transaction applied")?;
+    client_init_account.assert_success();
+    Ok(())
+}
+
 /// Generates a random path within the `test` directory.
 fn generate_random_test_dir_path(test: &Test) -> PathBuf {
     let rng = rand::thread_rng();

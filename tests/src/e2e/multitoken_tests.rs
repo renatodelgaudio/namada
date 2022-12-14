@@ -4,7 +4,9 @@ use color_eyre::eyre::Result;
 use super::helpers::get_actor_rpc;
 use super::setup::constants::{ALBERT, BERTHA, CHRISTEL};
 use super::setup::{self, Who};
-use crate::e2e;
+use crate::e2e::setup::constants::NAM;
+use crate::e2e::setup::Bin;
+use crate::{e2e, run};
 
 mod helpers;
 
@@ -16,7 +18,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     let multitoken_alias = helpers::init_multitoken_vp(&test, &rpc_addr)?;
 
     // establish a multitoken VP with the following balances
-    // - #atest5blah/tokens/red/balance/$albert = 100
+    // - #atest5blah/tokens/red/balance/$albert_established = 100
     // - #atest5blah/tokens/red/balance/$bertha = 0
 
     let multitoken_vp_addr =
@@ -59,5 +61,37 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     authorized_transfer.exp_string("Transaction applied with result")?;
     authorized_transfer.exp_string("Transaction is valid")?;
     authorized_transfer.assert_success();
+    Ok(())
+}
+
+#[test]
+fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
+    let (test, _ledger) = e2e::helpers::setup_single_node_test()?;
+
+    let rpc_addr = get_actor_rpc(&test, &Who::Validator(0));
+    let multitoken_alias = helpers::init_multitoken_vp(&test, &rpc_addr)?;
+
+    // establish a multitoken VP with the following balances
+    // - #atest5blah/tokens/red/balance/$albert_established = 100
+    // - #atest5blah/tokens/red/balance/$bertha = 0
+
+    let multitoken_vp_addr =
+        e2e::helpers::find_address(&test, &multitoken_alias)?;
+    println!("Fake multitoken VP established at {}", multitoken_vp_addr);
+
+    // create an established account that we control
+    let established_alias = "established";
+
+    // TODO: don't actually have Albert's key available in the wallet, so using
+    // validator-0 temporarily
+    helpers::init_established_account(
+        &test,
+        &rpc_addr,
+        "validator-0",
+        established_alias,
+    )?;
+
+    // let albert_addr = e2e::helpers::find_address(&test, ALBERT)?;
+
     Ok(())
 }
