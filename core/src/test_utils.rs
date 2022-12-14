@@ -32,4 +32,13 @@ impl TestWasms {
         };
         PathBuf::from("../wasm_for_tests").join(filename)
     }
+
+    /// Attempts to read the contents of this test wasm. Panics if it is not
+    /// able to for any reason.
+    pub fn bytes(&self) -> Vec<u8> {
+        let path = self.path();
+        std::fs::read(&path).unwrap_or_else(|_| {
+            panic!("Could not read wasm at path {}", path.to_string_lossy())
+        })
+    }
 }
