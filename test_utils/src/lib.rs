@@ -5,6 +5,10 @@ use std::path::PathBuf;
 
 use git2::Repository;
 
+/// Path from the root of the Git repo to the directory under which built test
+/// wasms can be found.
+pub const WASM_FOR_TESTS_DIR: &str = "wasm_for_tests";
+
 /// Corresponds to wasms that we build for tests (under the `wasm_for_tests/`
 /// directory).
 #[allow(missing_docs)]
@@ -45,7 +49,7 @@ impl TestWasms {
         repo_root
             .workdir()
             .unwrap()
-            .join("wasm_for_tests")
+            .join(WASM_FOR_TESTS_DIR)
             .join(filename)
     }
 
