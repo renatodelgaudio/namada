@@ -11,6 +11,9 @@ pub mod ledger;
 pub mod proto;
 pub mod types;
 
+#[cfg(feature = "testing")]
+pub mod test_utils;
+
 #[cfg(feature = "abciplus")]
 pub use {ibc, ibc_proto, tendermint, tendermint_proto};
 #[cfg(feature = "abcipp")]
