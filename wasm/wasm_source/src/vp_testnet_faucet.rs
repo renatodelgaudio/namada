@@ -175,7 +175,7 @@ mod tests {
         let mut tx_env = TestTxEnv::default();
 
         let vp_owner = address::testing::established_address_1();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);
@@ -210,7 +210,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = &keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);

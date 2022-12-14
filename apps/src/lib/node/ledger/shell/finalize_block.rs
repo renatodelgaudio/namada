@@ -330,9 +330,9 @@ where
 /// are covered by the e2e tests.
 #[cfg(test)]
 mod test_finalize_block {
-    use namada_test_utils::TestWasms;
     use namada::types::storage::Epoch;
     use namada::types::transaction::{EncryptionKey, Fee};
+    use namada_test_utils::TestWasms;
 
     use super::*;
     use crate::node::ledger::shell::test_utils::*;
@@ -531,7 +531,7 @@ mod test_finalize_block {
         let mut valid_txs = vec![];
 
         // create two decrypted txs
-        let tx_code = TestWasms::TxNoOp.bytes();
+        let tx_code = TestWasms::TxNoOp.read_bytes();
         for i in 0..2 {
             let raw_tx = Tx::new(
                 tx_code.clone(),

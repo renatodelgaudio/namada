@@ -67,7 +67,7 @@ impl TestWasms {
 
     /// Attempts to read the contents of this test wasm. Panics if it is not
     /// able to for any reason.
-    pub fn bytes(&self) -> Vec<u8> {
+    pub fn read_bytes(&self) -> Vec<u8> {
         let path = self.path();
         std::fs::read(&path).unwrap_or_else(|err| {
             panic!(

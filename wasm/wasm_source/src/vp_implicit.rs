@@ -519,8 +519,8 @@ mod tests {
 
     /// Generates a keypair, derive an implicit address from it and generate
     /// a storage key inside its storage.
-    fn arb_account_storage_subspace_key()
-    -> impl Strategy<Value = (key::common::SecretKey, Address, Key)> {
+    fn arb_account_storage_subspace_key(
+    ) -> impl Strategy<Value = (key::common::SecretKey, Address, Key)> {
         // Generate a keypair
         key::testing::arb_common_keypair().prop_flat_map(|sk| {
             let pk = sk.ref_to();
@@ -623,7 +623,7 @@ mod tests {
         let secret_key = key::testing::keypair_1();
         let public_key = secret_key.ref_to();
         let vp_owner: Address = (&public_key).into();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);
@@ -657,7 +657,7 @@ mod tests {
         let secret_key = key::testing::keypair_1();
         let public_key = secret_key.ref_to();
         let vp_owner: Address = (&public_key).into();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         let vp_hash = sha256(&vp_code);
         tx_env.init_parameters(
@@ -702,7 +702,7 @@ mod tests {
         let secret_key = key::testing::keypair_1();
         let public_key = secret_key.ref_to();
         let vp_owner: Address = (&public_key).into();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // hardcoded hash of VP_ALWAYS_TRUE_WASM
         tx_env.init_parameters(None, None, Some(vec!["E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855".to_string()]));

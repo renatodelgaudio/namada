@@ -515,7 +515,7 @@ mod tests {
         let mut tx_env = TestTxEnv::default();
 
         let vp_owner = address::testing::established_address_1();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);
@@ -551,7 +551,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);
@@ -591,7 +591,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // Spawn the accounts to be able to modify their storage
         tx_env.spawn_accounts([&vp_owner]);
@@ -630,7 +630,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         let vp_hash = sha256(&vp_code);
         tx_env.init_parameters(None, Some(vec![vp_hash.to_string()]), None);
@@ -672,7 +672,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         let vp_hash = sha256(&vp_code);
         tx_env.init_parameters(
@@ -717,7 +717,7 @@ mod tests {
         let vp_owner = address::testing::established_address_1();
         let keypair = key::testing::keypair_1();
         let public_key = keypair.ref_to();
-        let vp_code = TestWasms::VpAlwaysTrue.bytes();
+        let vp_code = TestWasms::VpAlwaysTrue.read_bytes();
 
         // hardcoded hash of VP_ALWAYS_TRUE_WASM
         tx_env.init_parameters(None, None, Some(vec!["E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855".to_string()]));
