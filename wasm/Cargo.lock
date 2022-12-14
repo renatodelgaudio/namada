@@ -2579,7 +2579,6 @@ dependencies = [
  "derivative",
  "ed25519-consensus",
  "ferveo-common",
- "git2",
  "ibc",
  "ibc-proto",
  "ics23",
@@ -2627,6 +2626,14 @@ dependencies = [
  "rust_decimal_macros",
  "thiserror",
  "tracing",
+]
+
+[[package]]
+name = "namada_test_utils"
+version = "0.12.0"
+dependencies = [
+ "git2",
+ "namada_core",
 ]
 
 [[package]]
@@ -2707,6 +2714,7 @@ dependencies = [
  "masp_primitives",
  "masp_proofs",
  "namada",
+ "namada_test_utils",
  "namada_tests",
  "namada_tx_prelude",
  "namada_vp_prelude",

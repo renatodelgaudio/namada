@@ -196,7 +196,7 @@ fn validate_tx(
 
 #[cfg(test)]
 mod tests {
-    use namada::core::test_utils::TestWasms;
+    use namada_test_utils::TestWasms;
     // Use this as `#[test]` annotation to enable logging
     use namada_tests::log::test;
     use namada_tests::tx::{self, tx_host_env, TestTxEnv};

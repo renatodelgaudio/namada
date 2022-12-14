@@ -330,7 +330,7 @@ where
 /// are covered by the e2e tests.
 #[cfg(test)]
 mod test_finalize_block {
-    use namada::core::test_utils::TestWasms;
+    use namada_test_utils::TestWasms;
     use namada::types::storage::Epoch;
     use namada::types::transaction::{EncryptionKey, Fee};
 

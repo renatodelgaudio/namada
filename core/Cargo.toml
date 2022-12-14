@@ -46,7 +46,6 @@ ibc-mocks-abcipp = [
 
 # for integration tests and test utilies
 testing = [
-  "git2",
   "rand",
   "rand_core",
   "proptest",
@@ -97,7 +96,6 @@ tendermint-proto-abcipp = {package = "tendermint-proto", git = "https://github.c
 thiserror = "1.0.30"
 tracing = "0.1.30"
 zeroize = {version = "1.5.5", features = ["zeroize_derive"]}
-git2 = {version = "0.13.22", optional = true}
 
 [dev-dependencies]
 assert_matches = "1.5.0"
