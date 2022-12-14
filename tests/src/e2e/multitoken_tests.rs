@@ -20,10 +20,10 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     // - #atest5blah/tokens/red/balance/$bertha = 0
 
     let multitoken_vp_addr =
-        helpers::get_address_for_alias(&test, &multitoken_alias)?;
+        e2e::helpers::find_address(&test, &multitoken_alias)?;
     println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
-    let albert_addr = helpers::get_address_for_alias(&test, ALBERT)?;
+    let albert_addr = e2e::helpers::find_address(&test, ALBERT)?;
     helpers::mint_red_tokens(
         &test,
         &rpc_addr,

@@ -20,23 +20,6 @@ const RED_TOKEN_KEY_SEGMENT: &str = "red";
 
 const ARBITRARY_SIGNER: &str = ALBERT;
 
-pub fn get_address_for_alias(test: &Test, alias: &str) -> Result<Address> {
-    let wallet_find_address = run!(
-        test,
-        Bin::Wallet,
-        vec!["address", "find", "--alias", alias],
-        Some(40)
-    )?
-    .background();
-    // sleep a couple secs so the command has chance to run? maybe this isn't
-    // necessary
-    std::thread::sleep(std::time::Duration::from_secs(2));
-    let mut wallet_find_address = wallet_find_address.foreground();
-
-    let (_, addr) = wallet_find_address.exp_regex(r"atest1\w+")?;
-    Ok(Address::decode(addr)?)
-}
-
 /// Initializes a VP to represent a multitoken account.
 pub fn init_multitoken_vp(test: &Test, rpc_addr: &str) -> Result<String> {
     // we use a VP that always returns true for the multitoken VP here, as we
