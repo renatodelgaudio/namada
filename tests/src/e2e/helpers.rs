@@ -16,9 +16,28 @@ use namada::types::storage::Epoch;
 use namada_apps::config::genesis::genesis_config;
 use namada_apps::config::{Config, TendermintMode};
 
-use super::setup::{sleep, Test, ENV_VAR_DEBUG, ENV_VAR_USE_PREBUILT_BINARIES};
+use super::setup::{
+    self, sleep, NamadaBgCmd, Test, ENV_VAR_DEBUG,
+    ENV_VAR_USE_PREBUILT_BINARIES,
+};
 use crate::e2e::setup::{Bin, Who, APPS_PACKAGE};
-use crate::run;
+use crate::{run, run_as};
+
+/// Sets up a test chain with a single validator node running in the background,
+/// and returns the [`Test`] handle and [`NamadaBgCmd`] for the validator node.
+/// It blocks until the node is ready to receive RPC requests from
+/// `namadac`.
+pub fn setup_single_node_test() -> Result<(Test, NamadaBgCmd)> {
+    let test = setup::single_node_net()?;
+    let mut ledger =
+        run_as!(test, Who::Validator(0), Bin::Node, &["ledger"], Some(40))?;
+    ledger.exp_string("Namada ledger node started")?;
+    // TODO(namada#867): we only need to wait until the RPC server is available,
+    // not necessarily for a block to be committed
+    // ledger.exp_string("Starting RPC HTTP server on")?;
+    ledger.exp_regex(r"Committed block hash.*, height: [0-9]+")?;
+    Ok((test, ledger.background()))
+}
 
 /// Find the address of an account by its alias from the wallet
 pub fn find_address(test: &Test, alias: impl AsRef<str>) -> Result<Address> {

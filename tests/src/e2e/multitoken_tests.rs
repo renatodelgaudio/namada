@@ -3,22 +3,14 @@ use color_eyre::eyre::Result;
 
 use super::helpers::get_actor_rpc;
 use super::setup::constants::{ALBERT, BERTHA, CHRISTEL};
-use super::setup::{self, Bin, Who};
-use crate::run_as;
+use super::setup::{self, Who};
+use crate::e2e;
 
 mod helpers;
 
 #[test]
 fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
-    let test = setup::single_node_net()?;
-    let mut ledger =
-        run_as!(test, Who::Validator(0), Bin::Node, &["ledger"], Some(40))?;
-    ledger.exp_string("Namada ledger node started")?;
-    // TODO(namada#867): we only need to wait until the RPC server is available,
-    // not necessarily for a block to be committed
-    // ledger.exp_string("Starting RPC HTTP server on")?;
-    ledger.exp_regex(r"Committed block hash.*, height: [0-9]+")?;
-    let _bg_ledger = ledger.background();
+    let (test, _ledger) = e2e::helpers::setup_single_node_test()?;
 
     let rpc_addr = get_actor_rpc(&test, &Who::Validator(0));
     let multitoken_alias = helpers::init_multitoken_vp(&test, &rpc_addr)?;
