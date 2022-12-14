@@ -44,11 +44,22 @@ impl TestWasms {
             TestWasms::VpMemoryLimit => "vp_memory_limit.wasm",
             TestWasms::VpReadStorageKey => "vp_read_storage_key.wasm",
         };
-        let repo_root =
-            Repository::discover(env::current_dir().unwrap()).unwrap();
+        let cwd =
+            env::current_dir().expect("Couldn't get current working directory");
+        let repo_root = Repository::discover(&cwd).unwrap_or_else(|err| {
+            panic!(
+                "Couldn't discover a Git repository for the current working \
+                 directory {}: {:?}",
+                cwd.to_string_lossy(),
+                err
+            )
+        });
         repo_root
             .workdir()
-            .unwrap()
+            .expect(
+                "Couldn't get the path to working directory for the Git \
+                 repository",
+            )
             .join(WASM_FOR_TESTS_DIR)
             .join(filename)
     }
@@ -57,8 +68,12 @@ impl TestWasms {
     /// able to for any reason.
     pub fn bytes(&self) -> Vec<u8> {
         let path = self.path();
-        std::fs::read(&path).unwrap_or_else(|_| {
-            panic!("Could not read wasm at path {}", path.to_string_lossy())
+        std::fs::read(&path).unwrap_or_else(|err| {
+            panic!(
+                "Could not read wasm at path {}: {:?}",
+                path.to_string_lossy(),
+                err
+            )
         })
     }
 }
