@@ -1,15 +1,17 @@
 //! Helpers for use in multitoken tests.
 use std::path::PathBuf;
 
+use borsh::BorshSerialize;
 use color_eyre::eyre::Result;
 use namada_core::types::address::Address;
-use namada_core::types::storage;
+use namada_core::types::tx_data::TxWriteData;
+use namada_core::types::{storage, token};
 use namada_tx_prelude::storage::KeySeg;
 use rand::Rng;
 
 use super::setup::constants::{wasm_abs_path, NAM, VP_ALWAYS_TRUE_WASM};
 use super::setup::{Bin, NamadaCmd, Test};
-use crate::e2e::setup::constants::{ALBERT, TX_WRITE_STORAGE_KEY_WASM};
+use crate::e2e::setup::constants::{ALBERT, TX_WRITE_WASM};
 use crate::run;
 
 const MULTITOKEN_KEY_SEGMENT: &str = "tokens";
@@ -109,8 +111,15 @@ pub fn mint_red_tokens(
         .push(&BALANCE_KEY_SEGMENT.to_owned())?
         .push(owner)?;
 
-    let tx_code_path = wasm_abs_path(TX_WRITE_STORAGE_KEY_WASM);
-    let tx_data_path = write_test_file(test, format!("{red_balance_key}"))?;
+    let tx_code_path = wasm_abs_path(TX_WRITE_WASM);
+    let tx_data_path = write_test_file(
+        test,
+        TxWriteData {
+            key: red_balance_key,
+            value: token::Amount::from(100_000_000).try_to_vec()?,
+        }
+        .try_to_vec()?,
+    )?;
 
     let tx_data_path = tx_data_path.to_string_lossy().to_string();
     let tx_code_path = tx_code_path.to_string_lossy().to_string();
