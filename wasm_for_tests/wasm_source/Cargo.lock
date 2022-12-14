@@ -2510,6 +2510,7 @@ dependencies = [
  "itertools",
  "libsecp256k1",
  "masp_primitives",
+ "num-traits",
  "proptest",
  "prost",
  "prost-types",
