@@ -1,13 +1,16 @@
 //! Helpers for use in multitoken tests.
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use borsh::BorshSerialize;
 use color_eyre::eyre::Result;
+use eyre::Context;
 use namada_core::types::address::Address;
 use namada_core::types::tx_data::TxWriteData;
 use namada_core::types::{storage, token};
 use namada_tx_prelude::storage::KeySeg;
 use rand::Rng;
+use regex::Regex;
 
 use super::setup::constants::{wasm_abs_path, NAM, VP_ALWAYS_TRUE_WASM};
 use super::setup::{Bin, NamadaCmd, Test};
@@ -174,9 +177,13 @@ pub fn fetch_red_token_balance(
         rpc_addr,
     ];
     let mut client_balance = run!(test, Bin::Client, balance_args, Some(40))?;
-    // client_balance.exp_string("Balance:")?;
-    // let balance =
-    // client_balance.exp_regex(r"(\d+)")?.parse::<u64>().unwrap();
+    let (_, matched) = client_balance.exp_regex(&format!(
+        r"{MULTITOKEN_RED_TOKEN_SUB_PREFIX}: (\d*\.?\d+)"
+    ))?;
+    let decimal_regex = Regex::new(r"(\d*\.?\d+)").unwrap();
+    println!("Got balance for {}: {}", owner_alias, matched);
+    let decimal = decimal_regex.find(&matched).unwrap().as_str();
     client_balance.assert_success();
-    Ok(token::Amount::from(100))
+    token::Amount::from_str(decimal)
+        .wrap_err(format!("Failed to parse {}", matched))
 }

@@ -25,13 +25,16 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
     let albert_addr = e2e::helpers::find_address(&test, ALBERT)?;
+    let albert_starting_red_balance = token::Amount::from(100_000_000);
     helpers::mint_red_tokens(
         &test,
         &rpc_addr,
         &multitoken_vp_addr,
         &albert_addr,
-        &token::Amount::from(100_000_000),
+        &albert_starting_red_balance,
     )?;
+
+    let transfer_amount = token::Amount::from(10_000_000);
 
     // make a transfer from Albert to Bertha, signed by Christel - this should
     // be rejected
@@ -42,19 +45,20 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         ALBERT,
         BERTHA,
         CHRISTEL,
-        &token::Amount::from(10_000_000),
+        &transfer_amount,
     )?;
     unauthorized_transfer.exp_string("Transaction applied with result")?;
     unauthorized_transfer.exp_string("Transaction is invalid")?;
     unauthorized_transfer.exp_string(&format!("Rejected: {albert_addr}"))?;
     unauthorized_transfer.assert_success();
 
-    helpers::fetch_red_token_balance(
+    let albert_balance = helpers::fetch_red_token_balance(
         &test,
         &rpc_addr,
         &multitoken_alias,
         ALBERT,
     )?;
+    assert_eq!(albert_balance, albert_starting_red_balance);
 
     // make a transfer from Albert to Bertha, signed by Albert - this should
     // be accepted
@@ -70,6 +74,17 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     authorized_transfer.exp_string("Transaction applied with result")?;
     authorized_transfer.exp_string("Transaction is valid")?;
     authorized_transfer.assert_success();
+
+    let albert_balance = helpers::fetch_red_token_balance(
+        &test,
+        &rpc_addr,
+        &multitoken_alias,
+        ALBERT,
+    )?;
+    assert_eq!(
+        albert_balance,
+        albert_starting_red_balance - transfer_amount
+    );
     Ok(())
 }
 
