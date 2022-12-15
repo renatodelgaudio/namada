@@ -49,6 +49,13 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
     unauthorized_transfer.exp_string(&format!("Rejected: {albert_addr}"))?;
     unauthorized_transfer.assert_success();
 
+    helpers::fetch_red_token_balance(
+        &test,
+        &rpc_addr,
+        &multitoken_alias,
+        ALBERT,
+    )?;
+
     // make a transfer from Albert to Bertha, signed by Albert - this should
     // be accepted
     let mut authorized_transfer = helpers::attempt_red_tokens_transfer(

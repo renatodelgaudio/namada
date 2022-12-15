@@ -155,3 +155,28 @@ pub fn attempt_red_tokens_transfer(
     ];
     run!(test, Bin::Client, transfer_args, Some(40))
 }
+
+pub fn fetch_red_token_balance(
+    test: &Test,
+    rpc_addr: &str,
+    multitoken_alias: &str,
+    owner_alias: &str,
+) -> Result<token::Amount> {
+    let balance_args = vec![
+        "balance",
+        "--owner",
+        owner_alias,
+        "--token",
+        multitoken_alias,
+        "--sub-prefix",
+        MULTITOKEN_RED_TOKEN_SUB_PREFIX,
+        "--ledger-address",
+        rpc_addr,
+    ];
+    let mut client_balance = run!(test, Bin::Client, balance_args, Some(40))?;
+    // client_balance.exp_string("Balance:")?;
+    // let balance =
+    // client_balance.exp_regex(r"(\d+)")?.parse::<u64>().unwrap();
+    client_balance.assert_success();
+    Ok(token::Amount::from(100))
+}
