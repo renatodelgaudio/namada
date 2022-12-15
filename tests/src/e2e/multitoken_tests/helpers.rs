@@ -17,6 +17,7 @@ use crate::run;
 const MULTITOKEN_KEY_SEGMENT: &str = "tokens";
 const BALANCE_KEY_SEGMENT: &str = "balance";
 const RED_TOKEN_KEY_SEGMENT: &str = "red";
+const MULTITOKEN_RED_TOKEN_SUB_PREFIX: &str = "tokens/red";
 
 const ARBITRARY_SIGNER: &str = ALBERT;
 
@@ -159,14 +160,13 @@ pub fn attempt_red_tokens_transfer(
     signer: &str,
     amount: &token::Amount,
 ) -> Result<NamadaCmd> {
-    let sub_prefix = "tokens/red";
     let amount = amount.to_string();
     let transfer_args = vec![
         "transfer",
         "--token",
         multitoken,
         "--sub-prefix",
-        sub_prefix,
+        MULTITOKEN_RED_TOKEN_SUB_PREFIX,
         "--source",
         from,
         "--target",
