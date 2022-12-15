@@ -106,12 +106,13 @@ pub fn write_test_file(
     Ok(path)
 }
 
-/// Mint 100 red tokens to the given address.
+/// Mint red tokens to the given address.
 pub fn mint_red_tokens(
     test: &Test,
     rpc_addr: &str,
     multitoken: &Address,
     owner: &Address,
+    amount: &token::Amount,
 ) -> Result<()> {
     let red_balance_key = storage::Key::from(multitoken.to_db_key())
         .push(&MULTITOKEN_KEY_SEGMENT.to_owned())?
@@ -124,7 +125,7 @@ pub fn mint_red_tokens(
         test,
         TxWriteData {
             key: red_balance_key,
-            value: token::Amount::from(100_000_000).try_to_vec()?,
+            value: amount.try_to_vec()?,
         }
         .try_to_vec()?,
     )?;
@@ -156,8 +157,10 @@ pub fn attempt_red_tokens_transfer(
     from: &str,
     to: &str,
     signer: &str,
+    amount: &token::Amount,
 ) -> Result<NamadaCmd> {
     let sub_prefix = "tokens/red";
+    let amount = amount.to_string();
     let transfer_args = vec![
         "transfer",
         "--token",
@@ -171,7 +174,7 @@ pub fn attempt_red_tokens_transfer(
         "--signer",
         signer,
         "--amount",
-        "10",
+        &amount,
         "--ledger-address",
         rpc_addr,
     ];

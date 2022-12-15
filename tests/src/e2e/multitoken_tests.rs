@@ -1,5 +1,6 @@
 //! Tests for multitoken functionality
 use color_eyre::eyre::Result;
+use namada_core::types::token;
 
 use super::helpers::get_actor_rpc;
 use super::setup::constants::{ALBERT, BERTHA, CHRISTEL};
@@ -29,6 +30,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         &rpc_addr,
         &multitoken_vp_addr,
         &albert_addr,
+        &token::Amount::from(100_000_000),
     )?;
 
     // make a transfer from Albert to Bertha, signed by Christel - this should
@@ -40,6 +42,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         ALBERT,
         BERTHA,
         CHRISTEL,
+        &token::Amount::from(10_000_000),
     )?;
     unauthorized_transfer.exp_string("Transaction applied with result")?;
     unauthorized_transfer.exp_string("Transaction is invalid")?;
@@ -55,6 +58,7 @@ fn test_multitoken_transfer_implicit_to_implicit() -> Result<()> {
         ALBERT,
         BERTHA,
         ALBERT,
+        &token::Amount::from(10_000_000),
     )?;
     authorized_transfer.exp_string("Transaction applied with result")?;
     authorized_transfer.exp_string("Transaction is valid")?;
@@ -100,6 +104,7 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         &rpc_addr,
         &multitoken_vp_addr,
         &established_addr,
+        &token::Amount::from(100_000_000),
     )?;
 
     // attempt an unauthorized transfer to Albert from the established account
@@ -110,6 +115,7 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         established_alias,
         ALBERT,
         noncontrolling_alias,
+        &token::Amount::from(10_000_000),
     )?;
     unauthorized_transfer.exp_string("Transaction applied with result")?;
     unauthorized_transfer.exp_string("Transaction is invalid")?;
@@ -125,6 +131,7 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         established_alias,
         ALBERT,
         established_alias,
+        &token::Amount::from(10_000_000),
     )?;
     authorized_transfer.exp_string("Transaction applied with result")?;
     authorized_transfer.exp_string("Transaction is valid")?;
