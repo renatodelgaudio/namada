@@ -4,9 +4,7 @@ use color_eyre::eyre::Result;
 use super::helpers::get_actor_rpc;
 use super::setup::constants::{ALBERT, BERTHA, CHRISTEL};
 use super::setup::{self, Who};
-use crate::e2e::setup::constants::NAM;
-use crate::e2e::setup::Bin;
-use crate::{e2e, run};
+use crate::e2e;
 
 mod helpers;
 
