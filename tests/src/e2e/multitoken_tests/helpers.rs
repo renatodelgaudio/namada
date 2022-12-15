@@ -74,7 +74,7 @@ pub fn init_established_account(
         "--alias",
         established_alias,
         "--ledger-address",
-        &rpc_addr,
+        rpc_addr,
     ];
     let mut client_init_account =
         run!(test, Bin::Client, init_account_args, Some(40))?;
