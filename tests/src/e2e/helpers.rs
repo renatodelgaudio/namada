@@ -49,6 +49,31 @@ pub fn new_implicit_account(test: &Test, alias: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn init_established_account(
+    test: &Test,
+    rpc_addr: &str,
+    source_alias: &str,
+    established_alias: &str,
+) -> Result<()> {
+    let init_account_args = vec![
+        "init-account",
+        "--source",
+        source_alias,
+        "--public-key",
+        source_alias,
+        "--alias",
+        established_alias,
+        "--ledger-address",
+        rpc_addr,
+    ];
+    let mut client_init_account =
+        run!(test, Bin::Client, init_account_args, Some(40))?;
+    client_init_account.exp_string("Transaction is valid.")?;
+    client_init_account.exp_string("Transaction applied")?;
+    client_init_account.assert_success();
+    Ok(())
+}
+
 /// Find the address of an account by its alias from the wallet
 pub fn find_address(test: &Test, alias: impl AsRef<str>) -> Result<Address> {
     let mut find = run!(

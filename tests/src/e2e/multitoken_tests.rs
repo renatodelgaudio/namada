@@ -89,7 +89,7 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
 
     // create an established account that we control
     let established_alias = "established";
-    helpers::init_established_account(
+    e2e::helpers::init_established_account(
         &test,
         &rpc_addr,
         controlling_alias,
