@@ -39,20 +39,11 @@ pub fn setup_single_node_test() -> Result<(Test, NamadaBgCmd)> {
     Ok((test, ledger.background()))
 }
 
-/// Sets up a new implicit account and returns the alias. The secret key is
-/// unencrypted in the local wallet.
-pub fn new_implicit_account(test: &Test, alias: &str) -> Result<()> {
-    let args =
-        vec!["address", "gen", "--alias", alias, "--unsafe-dont-encrypt"];
-    let mut wallet_address_gen = run!(test, Bin::Wallet, &args, Some(40))?;
-    wallet_address_gen.assert_success();
-    Ok(())
-}
-
 pub fn init_established_account(
     test: &Test,
     rpc_addr: &str,
     source_alias: &str,
+    key_alias: &str,
     established_alias: &str,
 ) -> Result<()> {
     let init_account_args = vec![
@@ -60,7 +51,7 @@ pub fn init_established_account(
         "--source",
         source_alias,
         "--public-key",
-        source_alias,
+        key_alias,
         "--alias",
         established_alias,
         "--ledger-address",

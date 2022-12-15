@@ -6,6 +6,7 @@ use super::helpers::get_actor_rpc;
 use super::setup::constants::{ALBERT, BERTHA, CHRISTEL};
 use super::setup::{self, Who};
 use crate::e2e;
+use crate::e2e::setup::constants::ALBERT_KEY;
 
 mod helpers;
 
@@ -99,25 +100,17 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         e2e::helpers::find_address(&test, &multitoken_alias)?;
     println!("Fake multitoken VP established at {}", multitoken_vp_addr);
 
-    // create a new implicit account which will control the sender established
-    // account
-    let controlling_alias = "controlling";
-    e2e::helpers::new_implicit_account(&test, controlling_alias)?;
-
-    // create a new implicit account which *doesn't* control the sender
-    // established account
-    let noncontrolling_alias = "noncontrolling";
-    e2e::helpers::new_implicit_account(&test, noncontrolling_alias)?;
-
     // create an established account that we control
     let established_alias = "established";
     e2e::helpers::init_established_account(
         &test,
         &rpc_addr,
-        controlling_alias,
+        ALBERT,
+        ALBERT_KEY,
         established_alias,
     )?;
 
+    let established_starting_red_balance = token::Amount::from(100_000_000);
     // mint some red tokens for the established account
     let established_addr =
         e2e::helpers::find_address(&test, established_alias)?;
@@ -126,18 +119,19 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         &rpc_addr,
         &multitoken_vp_addr,
         &established_addr,
-        &token::Amount::from(100_000_000),
+        &established_starting_red_balance,
     )?;
 
+    let transfer_amount = token::Amount::from(10_000_000);
     // attempt an unauthorized transfer to Albert from the established account
     let mut unauthorized_transfer = helpers::attempt_red_tokens_transfer(
         &test,
         &rpc_addr,
         &multitoken_alias,
         established_alias,
-        ALBERT,
-        noncontrolling_alias,
-        &token::Amount::from(10_000_000),
+        BERTHA,
+        CHRISTEL,
+        &transfer_amount,
     )?;
     unauthorized_transfer.exp_string("Transaction applied with result")?;
     unauthorized_transfer.exp_string("Transaction is invalid")?;
@@ -145,19 +139,38 @@ fn test_multitoken_transfer_established_to_implicit() -> Result<()> {
         .exp_string(&format!("Rejected: {established_addr}"))?;
     unauthorized_transfer.assert_success();
 
+    let established_balance = helpers::fetch_red_token_balance(
+        &test,
+        &rpc_addr,
+        &multitoken_alias,
+        established_alias,
+    )?;
+    assert_eq!(established_balance, established_starting_red_balance,);
+
     // attempt an authorized transfer to Albert from the established account
     let mut authorized_transfer = helpers::attempt_red_tokens_transfer(
         &test,
         &rpc_addr,
         &multitoken_alias,
         established_alias,
+        BERTHA,
         ALBERT,
-        established_alias,
-        &token::Amount::from(10_000_000),
+        &transfer_amount,
     )?;
     authorized_transfer.exp_string("Transaction applied with result")?;
     authorized_transfer.exp_string("Transaction is valid")?;
     authorized_transfer.assert_success();
+
+    let established_balance = helpers::fetch_red_token_balance(
+        &test,
+        &rpc_addr,
+        &multitoken_alias,
+        established_alias,
+    )?;
+    assert_eq!(
+        established_balance,
+        established_starting_red_balance - transfer_amount
+    );
 
     Ok(())
 }
