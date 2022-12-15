@@ -44,8 +44,7 @@ pub fn setup_single_node_test() -> Result<(Test, NamadaBgCmd)> {
 pub fn new_implicit_account(test: &Test, alias: &str) -> Result<()> {
     let args =
         vec!["address", "gen", "--alias", alias, "--unsafe-dont-encrypt"];
-    let mut wallet_address_gen =
-        run_as!(test, Who::Validator(0), Bin::Wallet, &args, Some(40))?;
+    let mut wallet_address_gen = run!(test, Bin::Wallet, &args, Some(40))?;
     wallet_address_gen.assert_success();
     Ok(())
 }
