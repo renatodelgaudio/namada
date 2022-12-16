@@ -83,11 +83,10 @@ fn validate_tx(
                         false
                     }
                     Err(err) => {
-                        // TODO: propagate this error rather than returning
-                        // false?
+                        // TODO: propagate this error rather than returning false?
                         debug_log!(
-                            "Error while getting public key for address: \
-                             {:?}, error: {:?}",
+                            "Error while getting public key for address: {:?}, \
+                             error: {:?}",
                             addr,
                             err
                         );
