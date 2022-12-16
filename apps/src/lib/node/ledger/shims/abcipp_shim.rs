@@ -6,7 +6,6 @@ use std::task::{Context, Poll};
 
 use futures::future::FutureExt;
 use namada::types::address::Address;
-use namada::types::ethereum_events::EthereumEvent;
 #[cfg(not(feature = "abcipp"))]
 use namada::types::hash::Hash;
 #[cfg(not(feature = "abcipp"))]
