@@ -519,8 +519,8 @@ mod tests {
 
     /// Generates a keypair, derive an implicit address from it and generate
     /// a storage key inside its storage.
-    fn arb_account_storage_subspace_key(
-    ) -> impl Strategy<Value = (key::common::SecretKey, Address, Key)> {
+    fn arb_account_storage_subspace_key()
+    -> impl Strategy<Value = (key::common::SecretKey, Address, Key)> {
         // Generate a keypair
         key::testing::arb_common_keypair().prop_flat_map(|sk| {
             let pk = sk.ref_to();
