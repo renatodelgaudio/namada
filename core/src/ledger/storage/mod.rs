@@ -503,7 +503,11 @@ where
         }
     }
 
-    /// Returns a prefix iterator, ordered by storage keys, and the gas cost
+    /// WARNING: This only works for values that have been committed to DB.
+    /// To be able to see values written or deleted, but not yet committed,
+    /// use the `StorageWithWriteLog`.
+    ///
+    /// Returns a prefix iterator, ordered by storage keys, and the gas cost.
     pub fn iter_prefix(
         &self,
         prefix: &Key,
